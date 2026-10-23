@@ -8,7 +8,8 @@ x-service: &service
       fluentd-address: 127.0.0.1:24224
       fluentd-async: 'true'
       fluentd-buffer-limit: '4096'
-      fluentd-write-timeout: 2s
+      mode: non-blocking
+      max-buffer-size: 4m
       tag: 'begom.{{ "{{.Name}}" }}'
       cache-max-size: 10m
       cache-max-file: '3'
