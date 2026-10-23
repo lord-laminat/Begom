@@ -1,0 +1,67 @@
+{
+  "profile": "compose-mock-failures",
+  "started_at": "2026-10-23T08:42:39.375864+00:00",
+  "checks": [
+    {
+      "name": "mock_only",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "no_other_active_jobs",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "three_agents",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "load_started",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "SQL_loss_stops_new_HTTP",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "SQL_recovery",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "processing_resumes_after_SQL_recovery",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "missing_volume_identity_stops_new_HTTP",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "mount_identity_recovery",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "OpenBao_loss_stops_new_HTTP_after_cache_expiry",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "OpenBao_unseal_and_recovery",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "job_stops_after_dependency_recovery",
+      "status": "passed",
+      "observed": null
+    }
+  ],
+  "finished_at": "2026-10-23T08:44:32.348577+00:00"
+}

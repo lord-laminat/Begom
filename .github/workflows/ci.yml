@@ -1,0 +1,60 @@
+name: Begom verification
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main, 'feat/**', 'fix/**', 'test/**']
+permissions:
+  contents: read
+jobs:
+  go:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18.6-bookworm@sha256:bbf83594798e144bff365a9c191c5d779f181fb3135902064ab8ff11918020fc
+        env: {POSTGRES_USER: postgres, POSTGRES_PASSWORD: ci-disposable-only, POSTGRES_DB: begom_test}
+        ports: ['5432:5432']
+        options: --health-cmd pg_isready --health-interval 2s --health-timeout 2s --health-retries 30
+    env:
+      GOCACHE: /tmp/begom-go-build
+      GOMODCACHE: /tmp/begom-go-mod
+      BEGOM_TEST_DATABASE_URL: postgres://postgres:ci-disposable-only@localhost:5432/begom_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4.3.0
+        with: {persist-credentials: false}
+      - uses: actions/setup-go@v5.6.0
+        with: {go-version: 1.26.7, cache: false}
+      - run: make check
+      - run: make integration
+      - run: go run ./tools/openapi && git diff --exit-code -- docs/openapi.json
+      - run: docker compose config --quiet
+      - run: python3 -m pip install -r deploy/ansible/requirements.txt
+      - run: python3 tests/deploy/render.py
+      - run: ansible-playbook --syntax-check -i deploy/ansible/inventory.example.yml deploy/ansible/site.yml
+  stand:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      GOCACHE: /tmp/begom-go-build
+      GOMODCACHE: /tmp/begom-go-mod
+    steps:
+      - uses: actions/checkout@v4.3.0
+        with: {persist-credentials: false}
+      - uses: actions/setup-go@v5.6.0
+        with: {go-version: 1.26.7, cache: false}
+      - run: make build && bin/begomctl init --dir .local
+      - run: docker compose --progress plain up -d --build
+      - run: bin/begomctl acceptance --config .local/client.json --output artifacts/acceptance-local
+      - run: python3 -m pip install -r tests/browser/requirements.txt && python3 -m playwright install --with-deps chromium
+      - run: python3 tests/browser/run.py --config .local/client.json --output artifacts/browser
+      - run: python3 tests/faults/run.py --config .local/client.json --output artifacts/faults
+      - run: docker compose --profile verification build storage-faults && docker compose --profile verification run --rm --no-deps storage-faults | tee artifacts/enospc.log
+      - run: docker compose --profile backup build backup && python3 tests/backup/run.py --state .local --output artifacts/backup
+      - name: Keep actual protocols only
+        if: always()
+        uses: actions/upload-artifact@v4.6.2
+        with: {name: begom-stand-protocols, path: artifacts/, if-no-files-found: ignore}
+      - name: Stop containers and preserve volumes until runner cleanup
+        if: always()
+        run: docker compose down

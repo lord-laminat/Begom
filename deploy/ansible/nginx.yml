@@ -1,0 +1,25 @@
+- ansible.builtin.apt: {name: [nginx, prometheus-nginx-exporter, prometheus-postgres-exporter], state: present}
+- ansible.builtin.copy:
+    src: '{{ begom_bundle }}/secrets/{{ item }}'
+    dest: '/etc/begom/{{ item }}'
+    mode: '0600'
+  loop: [web.crt, web.key]
+  no_log: true
+- ansible.builtin.copy:
+    dest: /etc/nginx/nginx.conf
+    mode: '0644'
+    content: '{{ lookup("ansible.builtin.file", "../nginx/nginx.conf") | replace("user nginx begom;", "user www-data begom-media;") | replace("listen 8443 ssl;", "listen 443 ssl;") | replace("coordinator:8080", "127.0.0.1:8080") | replace("grafana:3000", "127.0.0.1:3000") | replace("/published/", "/srv/begom/published/") | replace("/run/secrets/web", "/etc/begom/web") | replace(" resolve;", ";") | replace("listen 8081;", "listen 127.0.0.1:8081;") | replace("access_log /dev/stdout begom;", "access_log /var/log/nginx/access.log begom;") | replace("error_log /dev/stderr warn;", "error_log /var/log/nginx/error.log warn;") }}'
+- ansible.builtin.command: {argv: [nginx, -t]}
+  changed_when: false
+- ansible.builtin.service: {name: nginx, enabled: true, state: reloaded}
+- ansible.builtin.copy:
+    dest: /etc/default/prometheus-nginx-exporter
+    content: 'ARGS="-nginx.scrape-uri=http://127.0.0.1:8081/nginx_status -web.listen-address=127.0.0.1:9113"\n'
+    mode: '0644'
+- ansible.builtin.copy:
+    dest: /etc/default/prometheus-postgres-exporter
+    content: 'DATA_SOURCE_NAME={{ lookup("ansible.builtin.file", begom_bundle + "/secrets/metrics-db-url") }}\nARGS="--web.listen-address=127.0.0.1:9187"\n'
+    mode: '0600'
+  no_log: true
+- ansible.builtin.service: {name: '{{ item }}', enabled: true, state: restarted}
+  loop: [prometheus-nginx-exporter, prometheus-postgres-exporter]

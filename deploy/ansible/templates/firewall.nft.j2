@@ -1,0 +1,15 @@
+# Only this application's table is replaced; existing host policy remains.
+table inet begom
+delete table inet begom
+table inet begom {
+ chain input {
+  type filter hook input priority -5; policy accept;
+  iifname lo accept
+  ct state established,related accept
+  ip saddr {{ begom_private_cidr }} tcp dport { 88, 443, 2049, 5432, 8200, 8201, 8444, 9100, 9101, 3100, 2020 } accept
+  ip saddr {{ begom_private_cidr }} udp dport { 88, 123 } accept
+  tcp dport { 2049, 5432, 8200, 8201, 8444, 9100, 9101, 3100, 9090, 9096, 3000, 9187, 9113, 2020 } drop
+  udp dport 88 drop
+  tcp dport 88 drop
+ }
+}

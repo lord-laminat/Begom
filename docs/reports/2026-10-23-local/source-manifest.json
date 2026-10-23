@@ -1,0 +1,567 @@
+{
+  "algorithm": "sha256",
+  "file_count": 140,
+  "source_tree_sha256": "34c9be564a8f505b61ba0b0e022f8fd73b4d7ed90de538ac77f8af6797acc4fa",
+  "files": [
+    {
+      "path": ".dockerignore",
+      "sha256": "7eb4a09075e01bc36388b86e39f4e7cd63f1b7aa567ed343273d20e9ad565ffc"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "dc2c5bcd491046daa7a1b3135d565b6656153505f11dee3b15e644c95d0856f3"
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "514a2cfc8ed947e83eb4936a3f1e4549914a76fb429215542d5b64e24ff42f6b"
+    },
+    {
+      "path": "Dockerfile",
+      "sha256": "0aafef50a4596dac1f9cc777133c05164b381e98f69a2ccaff24a930d8328ab1"
+    },
+    {
+      "path": "Makefile",
+      "sha256": "fbd72a77ce242c7bdee317531bb9294cbacb1624e04da83bb2bcaa0f37f5e3bb"
+    },
+    {
+      "path": "cmd/agent/main.go",
+      "sha256": "f51d378301f7a715ddfd142fba56c9685d52b572a5b7cc97da283a0e976ce8fe"
+    },
+    {
+      "path": "cmd/begomctl/extra.go",
+      "sha256": "0f53b91c9316f4b41f24cdb2ff50ec895a87fc133da11569b7fcc8a004ae96e0"
+    },
+    {
+      "path": "cmd/begomctl/main.go",
+      "sha256": "cfc82fb8b12b25876f151d32bbef7b77f4822d7e6f2ce1812e3e6c151781e1c1"
+    },
+    {
+      "path": "cmd/coordinator/main.go",
+      "sha256": "4ce40bb0222250db7c08e13c5f2e4ee33229977a18b80e837dd6f8e409617b51"
+    },
+    {
+      "path": "cmd/mockdonor/main.go",
+      "sha256": "cd0f194779c0aab20ca92136ee53826ae978f9ca158c281f57c378775868655b"
+    },
+    {
+      "path": "cmd/node-helper/main.go",
+      "sha256": "cc14ad698d6cd599f871c64f02ab794326211bc1ec37d7f6d26d55c8feb57b53"
+    },
+    {
+      "path": "deploy/ansible/acceptance.yml",
+      "sha256": "08d3070912265779d34758aa4cc29c13be2db6cb9e9ac03d604e03f247e625b8"
+    },
+    {
+      "path": "deploy/ansible/ansible.cfg",
+      "sha256": "ad6c4cb0061239095f0b26f66ca0162627924c2d3c77a1ce410dab786d2e03db"
+    },
+    {
+      "path": "deploy/ansible/backup.yml",
+      "sha256": "0cf4bcab9eadc0804e3941d09dd87dba6c173d56ae3d3608c4793ef78cbf900d"
+    },
+    {
+      "path": "deploy/ansible/files/begom-tickets.timer",
+      "sha256": "956941ee7687b7b52125481ccac9e04287ac949a74a1e941bef6a014b9df0506"
+    },
+    {
+      "path": "deploy/ansible/files/ssh-begom.conf",
+      "sha256": "7a4a937384361d2548e7da87cb05b771d9ca52feefd9908068510ea44c7c3282"
+    },
+    {
+      "path": "deploy/ansible/files/sudoers-begom",
+      "sha256": "6992c7452bbe6fe2d0f6225657648d14f746f54757fce9aa9e9b116ee1d4f54a"
+    },
+    {
+      "path": "deploy/ansible/firewall.yml",
+      "sha256": "8582cff5013559a3c99be8ae8f688d796af56f90bbc5e1e7e533f3e6b39f951f"
+    },
+    {
+      "path": "deploy/ansible/infrastructure.yml",
+      "sha256": "891ba6b7db47851c856b07f2272c05c46e1169082a10ad4b9ff838eab37b1fc5"
+    },
+    {
+      "path": "deploy/ansible/inventory.example.yml",
+      "sha256": "de6d321bc10124ee1fed84644c6230b080eaebbe33a26213ab68c515ed87454b"
+    },
+    {
+      "path": "deploy/ansible/keytab.yml",
+      "sha256": "e135d680a9ae58aa18b33fdac67b1ff128300c1de1e586f750f21933231006f8"
+    },
+    {
+      "path": "deploy/ansible/nginx.yml",
+      "sha256": "163a1aed052023411e3d8cab67702c7f238aa4906672a32232c50c43eef59663"
+    },
+    {
+      "path": "deploy/ansible/observability-agent.yml",
+      "sha256": "9611581fff292575cfcd340b2b2c82108397b666ee2e81369a9fb0d79ece8109"
+    },
+    {
+      "path": "deploy/ansible/operations.yml",
+      "sha256": "fa4e098722cbfff355fb57225ecd6a2459e8d437726b930f4a277288d802efe7"
+    },
+    {
+      "path": "deploy/ansible/principal.yml",
+      "sha256": "f0c32714a621ac493945b53c84267206e5355530e65eb72a10959c4192e692d9"
+    },
+    {
+      "path": "deploy/ansible/requirements.txt",
+      "sha256": "1fd10808150971b2358732e78d407b22b3e97417598a599a1ed75193097df075"
+    },
+    {
+      "path": "deploy/ansible/site.yml",
+      "sha256": "3de019ce7662ff7b4a4ab74dd12d0cbc805a80cfaa923ec40a0ae9b0286c8957"
+    },
+    {
+      "path": "deploy/ansible/templates/begom-agent.service.j2",
+      "sha256": "a16fad1d858f009d36c3e994816b7f3a0235755ec7f78a6eff07004a5d51acf6"
+    },
+    {
+      "path": "deploy/ansible/templates/begom-coordinator.service.j2",
+      "sha256": "2c744dc98e930a63bf8ac3ff58804ead60aae056ab40b59622b18ad852e8d416"
+    },
+    {
+      "path": "deploy/ansible/templates/begom-tickets.j2",
+      "sha256": "afdd523e83e74d10cb3a0224dc489d56785eb79a1493fa58a323497b8b7338a4"
+    },
+    {
+      "path": "deploy/ansible/templates/begom-tickets.service.j2",
+      "sha256": "7e62572712aa2520e4414f92479f1a2eb7622a27255ed95b7fcbdd1a9cdf1701"
+    },
+    {
+      "path": "deploy/ansible/templates/compose.yml.j2",
+      "sha256": "83fb2c906701e3e0a753b2cf06f397a1d612d633cf51d4e1e934a01252d1400f"
+    },
+    {
+      "path": "deploy/ansible/templates/firewall.nft.j2",
+      "sha256": "7855be5b65ddb7ad89b33b05cec7baf3d048b52bcad232f192b3443b751b8308"
+    },
+    {
+      "path": "deploy/ansible/templates/fluent-bit.conf.j2",
+      "sha256": "17e21901a6969f32705a03e9b21527da01d68cc2b00df6e7b94e1b192760da4d"
+    },
+    {
+      "path": "deploy/ansible/templates/kdc.conf.j2",
+      "sha256": "1c3c7464427ce372602a663cf8b8c53c3ba1eba30923b9c10b2f5b23c2ae9e62"
+    },
+    {
+      "path": "deploy/ansible/templates/krb5.conf.j2",
+      "sha256": "6417a91649f740978bc7279c013f32ffc95a641f73f6b5251d37f786d0862b89"
+    },
+    {
+      "path": "deploy/ansible/templates/loki.yml.j2",
+      "sha256": "351271df65d359f1dff16d4fd15392f1f94820ea40197b779cc241a75630ec10"
+    },
+    {
+      "path": "deploy/ansible/templates/openbao.hcl.j2",
+      "sha256": "ec6cda856fccc74edc75ddf3a6b98955a20b3f79189d0ac3b98a87fd53d3d6f3"
+    },
+    {
+      "path": "deploy/ansible/templates/prometheus.yml.j2",
+      "sha256": "20684d3d45bcf246691b5c85ef3b9d6a860357989561787a362ab8ebc3259f94"
+    },
+    {
+      "path": "deploy/compose.kinescope.yml",
+      "sha256": "4e04c029521f1bd5c791222d6a019f3d0fc52ed4266c237e3694ebb751f05bf6"
+    },
+    {
+      "path": "deploy/fluent-bit/enrich.lua",
+      "sha256": "0ffdfc23bafebbb070904a778972394ddd8b747e09e3c620cfecc90eee54d047"
+    },
+    {
+      "path": "deploy/fluent-bit/fluent-bit.conf",
+      "sha256": "2a9eca379b72ec23746df102033e1dff59153a827484b704493685b8f25c4221"
+    },
+    {
+      "path": "deploy/fluent-bit/parsers.conf",
+      "sha256": "ad500e4a6c500b90f4bc7517732a66ceb06a309ec0bebd6a8b76d9157f773f80"
+    },
+    {
+      "path": "deploy/grafana/dashboards/begom.json",
+      "sha256": "65afd065c7d566738269279d6d1d162c80d41c016acdc05bc7070cd3387d8eb0"
+    },
+    {
+      "path": "deploy/grafana/provisioning/dashboards/default.yml",
+      "sha256": "6dc250a0799e05d7bf22bf4db07b16cedada6a2b197a6d987edeaae9ba79b5ae"
+    },
+    {
+      "path": "deploy/grafana/provisioning/datasources/default.yml",
+      "sha256": "34d8998dba8b519f891956bee238316e5316c967bd2fc520deed1aaa0833c66b"
+    },
+    {
+      "path": "deploy/linux-profile.example.json",
+      "sha256": "3c3ec39968db1eddec3c172525b65fcd69822c0d8120f54ebe152a96437657fa"
+    },
+    {
+      "path": "deploy/loki/config.yml",
+      "sha256": "43c703e2fcf01d847348094de9fd896c1eeef8af9838ecd733a14fdb73811248"
+    },
+    {
+      "path": "deploy/nginx/Dockerfile",
+      "sha256": "821517dbc6b7345706b75e5181891b2e80762898dd043d472fe5dc0e3f40bcec"
+    },
+    {
+      "path": "deploy/nginx/nginx.conf",
+      "sha256": "9d5ee07970cc07e780da2813ed8e8282c237a9b1363ec5ae3a10c885c921eb57"
+    },
+    {
+      "path": "deploy/openbao/config.hcl",
+      "sha256": "0b0cbf0e641d37d26b6677b7b9428e96c88e743b5153a14b360f21b2dea50a26"
+    },
+    {
+      "path": "deploy/postgres/exporter.yml",
+      "sha256": "3793a89889112a834a72aa2ed74dc479c3bd24b83cfa620c91c78db19cb00a86"
+    },
+    {
+      "path": "deploy/postgres/init.sh",
+      "sha256": "59d2d403afb929aef5e0457cbc85dfd4170329d818348ab86d78c1a51650e4ac"
+    },
+    {
+      "path": "deploy/prometheus/alerts.yml",
+      "sha256": "84a298b6e08b1e3c96d04b8574382b611b23211127da624da86724a3dfab16f5"
+    },
+    {
+      "path": "deploy/prometheus/prometheus.yml",
+      "sha256": "833fa6dfa10b72853016e7616c9552ea8055f798c3b73104a94269bc47061a3c"
+    },
+    {
+      "path": "docker-compose.yml",
+      "sha256": "4d5d7e865cdd52956cfbcd42f581116175e5ad1ab6297d65c712575ac81e8889"
+    },
+    {
+      "path": "go.mod",
+      "sha256": "0f5957420e9ee93c55aae3c6ecaecc3821fea92aebe20065746b3e47a957f312"
+    },
+    {
+      "path": "go.sum",
+      "sha256": "9e85e9c49199b3dc1fb58cc8c53e36f8bdbe961f91d431fbf6f5d5fbcdc8fe30"
+    },
+    {
+      "path": "internal/acceptance/run.go",
+      "sha256": "5452adae60f7160de0dcec486feb5b92871e75bfe3eebe1c1f587d926e633b84"
+    },
+    {
+      "path": "internal/agent/agent.go",
+      "sha256": "390b80ac927328ad11789be3675e7512f8dafd9b5f5bd2827e012d51c4b5c516"
+    },
+    {
+      "path": "internal/agent/download.go",
+      "sha256": "fb97d0a854591ddffd0fe4f813448b920b86544a2fee7bae10e28b7a35c296f8"
+    },
+    {
+      "path": "internal/agent/http.go",
+      "sha256": "c575b2c4d5d0a4738421e3343598d32399c3a11a74afbc291ae0819f3d8c333c"
+    },
+    {
+      "path": "internal/agent/http_test.go",
+      "sha256": "6faac8dbe192bd226a9166f60a0eea9d3ea81dcc842f405494c00f77df506122"
+    },
+    {
+      "path": "internal/agent/storage_fault_test.go",
+      "sha256": "4df950c1e9a4fd23f24765095634a01a82900f8c911ed1d607c39a09a0cd163a"
+    },
+    {
+      "path": "internal/auth/auth.go",
+      "sha256": "0e1e221b429973f76cb70bc68b5ff13ae35c5a0c6ee38352028d0cac31eb9ac9"
+    },
+    {
+      "path": "internal/auth/auth_test.go",
+      "sha256": "0b74958e9113457d45882651fd53d6e964773a3dbe813bba7b34ad89daaad910"
+    },
+    {
+      "path": "internal/backup/backup.go",
+      "sha256": "360f7ed779ae9401396c1fab25afb22a5d5d85eb685081f2fcc6a9144c2448bf"
+    },
+    {
+      "path": "internal/bootstrap/bao.go",
+      "sha256": "8ea2e658f0e235eda249ce68291e68e17b7eed554ad727504cf8b7b82a1dfd4e"
+    },
+    {
+      "path": "internal/bootstrap/database.go",
+      "sha256": "2ebad3dbe02f5e74406fe20e810192bda91d01c03f4d622dc17712ed385eda74"
+    },
+    {
+      "path": "internal/bootstrap/init.go",
+      "sha256": "8a807f9dc26971580496d6fbfe9d20f498abf77ecbfa6c79f6ee05a6ae0cfceb"
+    },
+    {
+      "path": "internal/bootstrap/linux.go",
+      "sha256": "6a5ae2f8b1d5f4e22567efbc10bef718049f8563f99e8e340103b9b3c9b8159f"
+    },
+    {
+      "path": "internal/bootstrap/package.go",
+      "sha256": "805dfe92ec5de958661f41725b1a8d227ffb030451df38610394d4839c1383ee"
+    },
+    {
+      "path": "internal/bootstrap/renew.go",
+      "sha256": "ce972c449393625a3ecdf9718c2aabdddd7cce8df8f03ac9444956b48bcc9235"
+    },
+    {
+      "path": "internal/config/config.go",
+      "sha256": "f3c399f34828465391e9516c42bec5f7e30a59e495108a7991c48708e2979a16"
+    },
+    {
+      "path": "internal/config/validate.go",
+      "sha256": "938ea61fae179c2f084cb187ba0d0302623b8d58c9e55a23eb3d9b1f014d5ef0"
+    },
+    {
+      "path": "internal/config/validate_test.go",
+      "sha256": "2bb555d3be850769111c13375b10edca3a875856ab3b9d7533877048197ca683"
+    },
+    {
+      "path": "internal/coordinator/csv_test.go",
+      "sha256": "a08a7645832d68bbf52fe6eb35f445a340218dd1b6c95f9ad21f2ba5ea572a39"
+    },
+    {
+      "path": "internal/coordinator/server.go",
+      "sha256": "79a19c1c5bb1045e8b40b7f00c32cb8bb20ab0376109fa858d8f145a46725ef3"
+    },
+    {
+      "path": "internal/coordinator/streams.go",
+      "sha256": "ba1ac43de65c4a5fabc2d63cee37492055fa2f56abca418f3d6f8e62cf9aba1b"
+    },
+    {
+      "path": "internal/db/db.go",
+      "sha256": "6762f9a8c14cb100e4d9e669f46628f555abe53ef6e2844cc47e1bcb3bddc8eb"
+    },
+    {
+      "path": "internal/db/epoch.go",
+      "sha256": "da83d1a172768b5e9f1dea38ef00e0bcb915ac537d950d38074d128db2a6fe43"
+    },
+    {
+      "path": "internal/db/jobs.go",
+      "sha256": "f4c9141a2070d0a0eecd4ddd212a509dd5c43c92e7c49e05281e83725a841b6c"
+    },
+    {
+      "path": "internal/db/leases.go",
+      "sha256": "83544a686d27b2d3f4bb313eee25162e16c05f302a52c3a25aa430fff6b97266"
+    },
+    {
+      "path": "internal/db/migrations/001_initial.sql",
+      "sha256": "fe0575e46edd550ff382b4c6ccd1d701fda406fe680c74131addc02f243a5fd6"
+    },
+    {
+      "path": "internal/db/migrations/002_recovery.sql",
+      "sha256": "09cd1d0430260fc0db521dd77c3515b1188b0014e9bda0835524acb463616a16"
+    },
+    {
+      "path": "internal/db/migrations/003_feedback.sql",
+      "sha256": "54e9889d9a0aec9acd9d1a217c586f42c5de9a0dec9fcea37633c8769b87b553"
+    },
+    {
+      "path": "internal/db/migrations/004_catalog.sql",
+      "sha256": "a10e6296ee565f93a5ef5fa64a0a4630c80f7544b0892b86d3fb12c5a436fc01"
+    },
+    {
+      "path": "internal/db/profile.go",
+      "sha256": "0d1381dd8396efa1afde26036117d77ca4a7e8a3bc15463573fd135250c11bda"
+    },
+    {
+      "path": "internal/db/progress.go",
+      "sha256": "57c85cd84959f0e9b088ff220addf22b2787371cbe4b2a5231f36f36d3082c41"
+    },
+    {
+      "path": "internal/db/publications.go",
+      "sha256": "4523c7f99dccab1315b179a8792e3196a9a21a3c90e332e55b7a3897d536312b"
+    },
+    {
+      "path": "internal/dispatch/budget_test.go",
+      "sha256": "dbf43314613100e8115be5ab65a55889ca15827bd82417ff5e4defe9f16f76f5"
+    },
+    {
+      "path": "internal/dispatch/dispatch.go",
+      "sha256": "60e01de09e55f131a4a3e1f9bca60dd168ea331be5333b71f68bf40e32d79144"
+    },
+    {
+      "path": "internal/donor/kinescope.go",
+      "sha256": "44c7f57be28a94c048df6119809fdd39efc479bea234986bf60efa9b7ce353ec"
+    },
+    {
+      "path": "internal/donor/kinescope_test.go",
+      "sha256": "0c5b1c25f837fcfd44407f0d0e77a0b41718fb407374f5d2d041797bcd416378"
+    },
+    {
+      "path": "internal/hostmetrics/disk_linux.go",
+      "sha256": "2d1065e681d60171e39a1b0aa0ee3833d675d14a92eb5d7e97382231fa401ca6"
+    },
+    {
+      "path": "internal/hostmetrics/metrics.go",
+      "sha256": "6b4ec7fade76c39d34fa21c6a67ca867aac625931fbfc72f28b9ee69ebb24b8c"
+    },
+    {
+      "path": "internal/hostmetrics/prometheus.go",
+      "sha256": "e6feda78c2eee252e497b10a494cdac7246d2c1b4fac02708434b7c0cc9960db"
+    },
+    {
+      "path": "internal/logging/logging.go",
+      "sha256": "19d16192672a50f097c273303ec467672668bd7ed345c618f686775ce7efdd55"
+    },
+    {
+      "path": "internal/logging/logging_test.go",
+      "sha256": "a0ac32b342103e6f0b076a674c327fb5adc936f69bb6cc549a22d7221056e757"
+    },
+    {
+      "path": "internal/mockdonor/fixtures/README.md",
+      "sha256": "0f6de582986d12a6a62835b5c75caf0e2a7fdb3c982eb2068cbf657f24d960c1"
+    },
+    {
+      "path": "internal/mockdonor/fixtures/video.mp4",
+      "sha256": "2e0d1d7d67b4a8dac738156728f47907ddeb061d6009bd823a73cc4f8d5f66a4"
+    },
+    {
+      "path": "internal/mockdonor/server.go",
+      "sha256": "cfe5a4b18a6e5462ff82b4df4b46b073e428a10dff44530397e59e6d12260820"
+    },
+    {
+      "path": "internal/model/model.go",
+      "sha256": "8cb616abe8196fe9137931ce4eacf9136df851988c691bac92fc014f2c5ab908"
+    },
+    {
+      "path": "internal/model/model_test.go",
+      "sha256": "66c10e3afdd985a2ad80285154787378a6a7d48cf9588cf555be5785ce4cabf7"
+    },
+    {
+      "path": "internal/nodecontrol/control.go",
+      "sha256": "4d0ed37f131ce99be4459a736c317f886278ea1d0109893a9d4ed90174acd4f7"
+    },
+    {
+      "path": "internal/nodecontrol/control_test.go",
+      "sha256": "33ed470284c9baf70707ba6de6b8659f48081368ea8f7c0f462eb663ff88b777"
+    },
+    {
+      "path": "internal/nodecontrol/package_test.go",
+      "sha256": "ac0db4765fb0d6d2e9fb5a4dc080b41599107d918b0355b2e17c593525fef9b6"
+    },
+    {
+      "path": "internal/nodecontrol/supervisor.go",
+      "sha256": "4062d78d75a3e213c20211325ff57acdc485ebf268c073287d31f0188abb71ef"
+    },
+    {
+      "path": "internal/pki/pki.go",
+      "sha256": "f30c701d5501b7e759a20467b54be88de71d156272dc8896340751dcd8104673"
+    },
+    {
+      "path": "internal/pki/pki_test.go",
+      "sha256": "679d03f2007fe987092f96da2e25f5430b0beb0443f417e3e60697e0e091b7c3"
+    },
+    {
+      "path": "internal/pki/ssh.go",
+      "sha256": "e053d9d918d8cc25dbdcb66df9eba6ff91de1cbeecd392044f5ceb43d3e45177"
+    },
+    {
+      "path": "internal/publication/service.go",
+      "sha256": "5cba767967d04c746b19ce54d326f0cb7e7698209a6be9383bc1a6690c776a7a"
+    },
+    {
+      "path": "internal/runtimeutil/runtime.go",
+      "sha256": "5521e384446ed1f000feb6358af9089aa1d2eedd3db0434b0558b93a81703b2d"
+    },
+    {
+      "path": "internal/secrets/bao.go",
+      "sha256": "7537061c3fe6a6662d7f3a97dabedc9774ddb8e94de74e6d670bc7c5b011073a"
+    },
+    {
+      "path": "internal/secrets/rotation.go",
+      "sha256": "0ce42da1cbb82d86059b2aea2bb85e7468000149796ef72ae8eb17f347cf2dc1"
+    },
+    {
+      "path": "internal/sshcontrol/ssh.go",
+      "sha256": "8546fd9bb74c4e4687d0e1e8c46cb9eb0efe7a5a041171b2a0ee6df5b052c766"
+    },
+    {
+      "path": "internal/sshcontrol/ssh_test.go",
+      "sha256": "332d878ec3e55d8f42dc646db9199570739a05fe98414012817689cc0ccc9f81"
+    },
+    {
+      "path": "internal/storage/storage.go",
+      "sha256": "d3c561ca2aacb9545f928742c84ce0c5e7b08954011cd0391202ec202113deb7"
+    },
+    {
+      "path": "internal/storage/storage_test.go",
+      "sha256": "c49ffc743ef48129c52163f26790a940f654e75ec629cfd036742f0002572296"
+    },
+    {
+      "path": "internal/target/policy.go",
+      "sha256": "6c1b70a42175469ac878be744c7346964e1a6b4170911f45cdda1c5971b765b5"
+    },
+    {
+      "path": "internal/target/policy_test.go",
+      "sha256": "eabc0ec623495318acc56a61168ca6ca040de66271ff4c3cbca3a17657b2aeff"
+    },
+    {
+      "path": "internal/webui/assets/app.js",
+      "sha256": "02fc71bbbf92a29c0bed928d4448937d5019a106434f9e3afc43b2c67b67c1fe"
+    },
+    {
+      "path": "internal/webui/assets/index.html",
+      "sha256": "ec4a635ddda9ccf735c6c1a00c76471ec2d83550a99d3372b875318aca6c6c97"
+    },
+    {
+      "path": "internal/webui/assets/style.css",
+      "sha256": "b86b990d2b4bf7ffc0f61be3136480e0d2470f41627d5af7a50bb9994fcf0c75"
+    },
+    {
+      "path": "internal/webui/ui.go",
+      "sha256": "b2099ff835ba30d212d59a4261e1c3382b46a389b8bd733bc0a84f418fa55fd0"
+    },
+    {
+      "path": "internal/wire/client.go",
+      "sha256": "5bc54b9ba99f47dc2669fa18ddc0eeee34650bb32b5f21397c4203b7b6b30038"
+    },
+    {
+      "path": "internal/wire/identity.go",
+      "sha256": "0b1b032da87afd6cbf24fb2d4594b1f16abc83cb1b71c96eb12ecc8c93a943d8"
+    },
+    {
+      "path": "tests/backup/run.py",
+      "sha256": "96c3ced56f456d4d31a8d0d88a40e4f4efe25c685e5390cd9ee9f0ee32c47dbe"
+    },
+    {
+      "path": "tests/browser/requirements.txt",
+      "sha256": "237f68beb9e5198d94b217868a1d08f3a26a58f9d9837a10b3ce09bec8a8727f"
+    },
+    {
+      "path": "tests/browser/run.py",
+      "sha256": "0d508c1720a3832cc80c5f1ac5eeaa1e33e3af28992842da162462403081f9b2"
+    },
+    {
+      "path": "tests/deploy/render.py",
+      "sha256": "d78e3f7733b38d31878e240176ee11634dd8415c6db3d58ec0c4a028fac53f51"
+    },
+    {
+      "path": "tests/faults/run.py",
+      "sha256": "a4365dafedc24ef14e63f78b7ed062cc9bf22cbcf5dd00975ac3587a11876852"
+    },
+    {
+      "path": "tests/integration/deduplication_test.go",
+      "sha256": "9d57d7df9a079f3ce99626da510b36c58204278d8737520f04df33e79c49d9c0"
+    },
+    {
+      "path": "tests/integration/dispatcher_test.go",
+      "sha256": "6a7de75768d7cb7561351700566b4d4ad7ed82961e869adca593bc179eb29a35"
+    },
+    {
+      "path": "tests/integration/export_test.go",
+      "sha256": "973ff952e14c1017833c550afc9761a4d5a4123d3b5945f9eed090d7cdd53b0d"
+    },
+    {
+      "path": "tests/integration/publication_test.go",
+      "sha256": "0593a6ad9ec8f979666ff58d614ec35411411850943472425864945d327305b4"
+    },
+    {
+      "path": "tests/integration/queries_test.go",
+      "sha256": "600d510de8befa430e780a8bb9494fbbef1cfcb57b51c483df84f0fc3e6ec25e"
+    },
+    {
+      "path": "tests/integration/store_test.go",
+      "sha256": "fed3d2846b5ff779b56b841a280d148e3b196fc15fb39e0cc8dc92a077c4d17d"
+    },
+    {
+      "path": "tools/openapi/main.go",
+      "sha256": "4e8dd05244e94054f519f7a447ac507b658cc3aa0bb6450dacac868c61705900"
+    },
+    {
+      "path": "tools/openapi/main_test.go",
+      "sha256": "3c01010ecd40f3c8b1b221ff6519cbf49b07cb40af15e933be3525056e9e5ee9"
+    }
+  ]
+}

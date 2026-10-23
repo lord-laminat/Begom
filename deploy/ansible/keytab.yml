@@ -1,0 +1,24 @@
+- ansible.builtin.command: {argv: [kadmin.local, -q, 'getprinc {{ principal }}@{{ begom_realm }}']}
+  register: principal_check
+  changed_when: false
+  failed_when: false
+- ansible.builtin.command: {argv: [kadmin.local, -q, 'addprinc -randkey {{ principal }}@{{ begom_realm }}']}
+  when: "'does not exist' in principal_check.stderr"
+  changed_when: true
+- ansible.builtin.set_fact:
+    keytab_name: '{{ node }}-{{ "host" if principal.startswith("nfs/") else principal }}.keytab'
+- ansible.builtin.command:
+    argv: [kadmin.local, -q, 'ktadd -norandkey -k /root/begom-keytabs/{{ keytab_name }} {{ principal }}@{{ begom_realm }}']
+    creates: '/root/begom-keytabs/{{ keytab_name }}'
+  no_log: true
+- ansible.builtin.fetch:
+    src: '/root/begom-keytabs/{{ keytab_name }}'
+    dest: '{{ begom_bundle }}/kerberos/{{ keytab_name }}'
+    flat: true
+  no_log: true
+- ansible.builtin.file:
+    path: '{{ begom_bundle }}/kerberos/{{ keytab_name }}'
+    mode: '0600'
+  delegate_to: localhost
+  become: false
+  no_log: true

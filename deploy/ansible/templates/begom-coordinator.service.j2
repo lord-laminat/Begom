@@ -1,0 +1,29 @@
+[Unit]
+Description=Begom coordinator and publisher
+After=network-online.target remote-fs.target begom-infrastructure.service begom-tickets.service
+Wants=network-online.target
+RequiresMountsFor=/srv/begom
+BindsTo=srv-begom.mount
+[Service]
+User=begom-publisher
+Group=begom-media
+SupplementaryGroups=begom-publisher
+Environment=KRB5CCNAME=FILE:/run/begom-ccaches/10000/krb5cc_10000
+ExecStartPre=/usr/bin/mountpoint -q /srv/begom
+ExecStart=/usr/local/bin/begom-coordinator --config /etc/begom/coordinator.json
+Restart=on-failure
+RestartSec=2s
+UMask=0027
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateDevices=true
+ReadWritePaths=/srv/begom /run/begom-ccaches
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+MemoryMax=1G
+CPUQuota=300%
+TasksMax=512
+LimitNOFILE=8192
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,33 @@
+flowchart TB
+  browser["Браузер / CLI"] -->|"HTTPS, session + CSRF"| nginx["NGINX / ACL subrequest"]
+  nginx -->|"HTTP loopback / private network"| c
+  subgraph control["Контрольный узел"]
+    c["Go coordinator: C1–C10 / C6 / publisher / SSH gateway"]
+    sql["PostgreSQL 18: confirmed state / leases / ACL / idempotency / epoch"]
+    bao["OpenBao: AppRole / runtime secrets / PKI / SSH"]
+    prom["Prometheus / infrastructure exporters"]
+    fluent["Fluent Bit bounded buffers"]
+    loki[Loki]
+    grafana["Grafana: administrator"]
+    c --> sql
+    c -->|"verified TLS"| bao
+    fluent --> loki
+    grafana --> prom
+    grafana --> loki
+  end
+  subgraph workers["Отдельные рабочие серверы"]
+    a1["Agent 1: A1–A5"]
+    a2["Agent 2: A1–A5"]
+    a3["Agent 3: A1–A5"]
+    helper["OpenSSH / closed node-helper / verified package"]
+  end
+  c <-->|"mTLS + Agent-Session / heartbeat / control WSS"| a1 & a2 & a3
+  c -->|"SSH: pinned host key"| helper
+  a1 & a2 & a3 -->|"one C6 permit per HTTP hop"| donor["Kinescope public downloadLink / isolated mock"]
+  a1 & a2 & a3 -->|"own staging only: NFSv4 krb5p"| nas["NAS: staging / publishing / published / quarantine"]
+  c -->|"publisher identity: verify / copy / atomic rename"| nas
+  nas -->|"published only, read-only identity"| nginx
+  nas -->|"read-only backup principal"| backup["Independent backup node: SQL snapshot + manifest + restic"]
+  sql --> backup
+  prom -->|"restricted metrics"| c & a1 & a2 & a3
+  nginx -->|"admin auth_request"| grafana

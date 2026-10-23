@@ -1,0 +1,101 @@
+{
+  "profile": "mock-browser",
+  "started_at": "2026-10-23T08:41:26.193661+00:00",
+  "checks": [
+    {
+      "name": "mock_only",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "three_registered_agents",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "metrics_collect_to_render",
+      "status": "passed",
+      "observed": {
+        "max_ms": 2237,
+        "samples": 150
+      }
+    },
+    {
+      "name": "wss_reconnect_and_http_refresh",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "responsive_width",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "ssh_terminal_pinned_host_and_closed_commands",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "uint64_browser_precision",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "controlled_XSS_fixture",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "metadata_XSS_escaped",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "csrf_rejected",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "viewer_login",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "acl_hides_unassigned_job",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "audit_administrator_only",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "acl_grants_view",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "viewer_cannot_manage",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "private_path__published",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "private_path_data",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "javascript_errors",
+      "status": "passed",
+      "observed": []
+    }
+  ],
+  "browser": "141.0.7390.37",
+  "finished_at": "2026-10-23T08:41:45.701419+00:00"
+}

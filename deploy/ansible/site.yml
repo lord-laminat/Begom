@@ -1,0 +1,213 @@
+- name: Verify the supplied deployment bundle and stand boundaries
+  hosts: all
+  become: true
+  tasks:
+    - ansible.builtin.assert:
+        that:
+          - ansible_facts.distribution == 'Ubuntu'
+          - ansible_facts.distribution_version == '24.04'
+          - groups['control'] | length == 1
+          - groups['nas'] | length == 1
+          - groups['agents'] | length >= 3
+          - groups['backup'] | length == 1
+          - begom_fqdn is match('^[a-zA-Z0-9.-]+$')
+          - begom_realm is match('^[A-Z0-9.-]+$')
+          - begom_bundle.startswith('/')
+    - name: Install Ubuntu system dependencies
+      ansible.builtin.apt:
+        name: [ca-certificates, chrony, nfs-common, krb5-user, acl, sudo, openssh-server, python3, curl, jq]
+        state: present
+        update_cache: true
+      environment: {DEBIAN_FRONTEND: noninteractive}
+    - ansible.builtin.service: {name: chrony, enabled: true, state: started}
+    - ansible.builtin.group: {name: begom-publisher, gid: 10000}
+    - ansible.builtin.group: {name: begom-media, gid: 10010}
+    - ansible.builtin.group: {name: 'begom-{{ item }}', gid: '{{ hostvars[item].begom_uid }}'}
+      loop: '{{ groups["agents"] }}'
+    - ansible.builtin.user: {name: begom-publisher, uid: 10000, group: begom-media, groups: begom-publisher, shell: /usr/sbin/nologin, create_home: false}
+    - ansible.builtin.user: {name: 'begom-{{ item }}', uid: '{{ hostvars[item].begom_uid }}', group: 'begom-{{ item }}', shell: /usr/sbin/nologin, create_home: false}
+      loop: '{{ groups["agents"] }}'
+    - ansible.builtin.user: {name: www-data, uid: 33, groups: begom-media, append: true}
+    - ansible.builtin.user: {name: begom-backup, uid: 10020, group: begom-media, shell: /usr/sbin/nologin, create_home: false}
+    - ansible.builtin.file: {path: '{{ item }}', state: directory, mode: '0755'}
+      loop: [/etc/begom, /etc/nfs.conf.d, /usr/local/libexec, /run/begom-ccaches, /srv/begom]
+    - ansible.builtin.template: {src: krb5.conf.j2, dest: /etc/krb5.conf, mode: '0644'}
+    - ansible.builtin.copy:
+        dest: /etc/nfs.conf.d/begom.conf
+        content: "[gssd]\ncred-cache-directory=/run/begom-ccaches/%U\nuse-memcache=1\n"
+        mode: '0644'
+    - ansible.builtin.copy:
+        dest: /etc/idmapd.conf
+        content: "[General]\nDomain = {{ begom_domain }}\n[Mapping]\nNobody-User = nobody\nNobody-Group = nogroup\n[Translation]\nMethod = nsswitch\n"
+        mode: '0644'
+    - ansible.builtin.copy:
+        src: '{{ begom_bundle }}/secrets/ca.crt'
+        dest: /etc/begom/ca.crt
+        mode: '0644'
+    - ansible.builtin.copy: {src: '{{ begom_binaries }}/begomctl', dest: /usr/local/bin/begomctl, mode: '0755'}
+
+- name: Prepare the NAS and an isolated Kerberos realm
+  hosts: nas
+  become: true
+  tasks:
+    - name: Refuse an absent dedicated NAS filesystem
+      ansible.builtin.command: {argv: [mountpoint, -q, '{{ begom_nas_device_mount }}']}
+      changed_when: false
+    - ansible.builtin.apt: {name: [nfs-kernel-server, krb5-kdc, krb5-admin-server], state: present}
+      environment: {DEBIAN_FRONTEND: noninteractive}
+    - ansible.builtin.template: {src: kdc.conf.j2, dest: /etc/krb5kdc/kdc.conf, mode: '0600'}
+    - name: Initialize the realm once; its generated master password stays in the private bundle
+      ansible.builtin.command:
+        argv: [kdb5_util, create, -s, -P, '{{ lookup("ansible.builtin.password", begom_bundle + "/bootstrap/kerberos-master", length=64) }}']
+        creates: /var/lib/krb5kdc/principal
+      no_log: true
+    - ansible.builtin.service: {name: krb5-kdc, enabled: true, state: restarted}
+    - ansible.builtin.file: {path: /root/begom-keytabs, state: directory, mode: '0700'}
+    - name: Issue host and user principals without changing existing keys
+      ansible.builtin.include_tasks: principal.yml
+      loop: '{{ groups["all"] }}'
+      loop_control: {loop_var: node}
+    - ansible.builtin.copy: {src: '/root/begom-keytabs/{{ inventory_hostname }}-host.keytab', dest: /etc/krb5.keytab, remote_src: true, mode: '0600'}
+      no_log: true
+    - ansible.builtin.file:
+        path: '{{ begom_nas_device_mount }}/begom'
+        state: directory
+        owner: begom-publisher
+        group: begom-media
+        mode: '0755'
+    - ansible.builtin.file:
+        path: '{{ begom_nas_device_mount }}/begom/{{ item.path }}'
+        state: directory
+        owner: '{{ item.owner }}'
+        group: '{{ item.group }}'
+        mode: '{{ item.mode }}'
+      loop:
+        - {path: staging, owner: begom-publisher, group: begom-publisher, mode: '0711'}
+        - {path: publishing, owner: begom-publisher, group: begom-publisher, mode: '0700'}
+        - {path: published, owner: begom-publisher, group: begom-media, mode: '0750'}
+        - {path: quarantine, owner: begom-publisher, group: begom-publisher, mode: '0700'}
+    - ansible.builtin.file:
+        path: '{{ begom_nas_device_mount }}/begom/staging/{{ item }}'
+        state: directory
+        owner: 'begom-{{ item }}'
+        group: begom-publisher
+        mode: '2770'
+      loop: '{{ groups["agents"] }}'
+    - ansible.builtin.copy:
+        src: '{{ begom_bundle }}/storage/.begom-volume'
+        dest: '{{ begom_nas_device_mount }}/begom/.begom-volume'
+        owner: begom-publisher
+        mode: '0444'
+    - ansible.builtin.copy:
+        dest: /etc/exports.d/begom.exports
+        content: '{{ begom_nas_device_mount }}/begom {{ begom_private_cidr }}(rw,sync,sec=krb5p,root_squash,no_subtree_check,fsid=0)\n'
+        mode: '0644'
+    - ansible.builtin.command: {argv: [exportfs, -ra]}
+      changed_when: true
+    - ansible.builtin.service: {name: nfs-server, enabled: true, state: restarted}
+
+- name: Mount the authenticated shared volume and renew service identities
+  hosts: control:agents:backup
+  become: true
+  tasks:
+    - ansible.builtin.copy:
+        src: '{{ begom_bundle }}/kerberos/{{ inventory_hostname }}-host.keytab'
+        dest: /etc/krb5.keytab
+        mode: '0600'
+      no_log: true
+    - ansible.builtin.set_fact:
+        begom_tickets: '{{ [{"user":"begom-"+inventory_hostname,"uid":begom_uid,"file":"nfs.keytab","principal":"begom-"+inventory_hostname}] if inventory_hostname in groups["agents"] else ([{"user":"begom-publisher","uid":10000,"file":"nfs.keytab","principal":"begom-publisher"},{"user":"www-data","uid":33,"file":"web-nfs.keytab","principal":"begom-web"}] if inventory_hostname in groups["control"] else [{"user":"begom-backup","uid":10020,"file":"nfs.keytab","principal":"begom-backup"}]) }}'
+    - ansible.builtin.copy:
+        src: '{{ begom_bundle }}/kerberos/{{ inventory_hostname }}-{{ item.principal }}.keytab'
+        dest: '/etc/begom/{{ item.file }}'
+        owner: '{{ item.user }}'
+        mode: '0600'
+      loop: '{{ begom_tickets }}'
+      no_log: true
+    - ansible.builtin.template: {src: begom-tickets.j2, dest: /usr/local/libexec/begom-tickets, mode: '0700'}
+    - ansible.builtin.template: {src: begom-tickets.service.j2, dest: /etc/systemd/system/begom-tickets.service, mode: '0644'}
+    - ansible.builtin.copy: {src: begom-tickets.timer, dest: /etc/systemd/system/begom-tickets.timer, mode: '0644'}
+    - ansible.builtin.systemd_service: {name: begom-tickets, daemon_reload: true, state: started}
+    - ansible.builtin.systemd_service: {name: begom-tickets.timer, enabled: true, state: started}
+    - ansible.builtin.lineinfile:
+        path: /etc/fstab
+        regexp: '^{{ begom_nas }}:/ '
+        line: '{{ begom_nas }}:/ /srv/begom nfs4 rw,vers=4.2,sec=krb5p,hard,_netdev,noexec,nosuid,nodev 0 0'
+    - ansible.builtin.command: {argv: [mount, /srv/begom]}
+      register: mount_result
+      failed_when: mount_result.rc != 0 and 'already mounted' not in mount_result.stderr
+      changed_when: mount_result.rc == 0
+    - ansible.builtin.command: {argv: [findmnt, -n, -o, OPTIONS, /srv/begom]}
+      register: nfs_options
+      changed_when: false
+    - ansible.builtin.assert: {that: ["'sec=krb5p' in nfs_options.stdout"]}
+
+- name: Start infrastructure, seed OpenBao, and configure the coordinator
+  hosts: control
+  become: true
+  tasks:
+    - ansible.builtin.include_tasks: infrastructure.yml
+    - name: Initialize secrets from the provisioning controller over verified TLS
+      ansible.builtin.command:
+        argv: ['{{ begom_binaries }}/begomctl', bao-init, --dir, '{{ begom_bundle }}', --url, 'https://{{ begom_control }}:8200']
+      delegate_to: localhost
+      become: false
+      no_log: true
+    - ansible.builtin.copy: {src: '{{ begom_bundle }}/secrets/coordinator-{{ item }}', dest: '/etc/begom/{{ item }}', owner: begom-publisher, mode: '0400'}
+      loop: [role-id, secret-id]
+      no_log: true
+    - ansible.builtin.copy: {src: '{{ begom_bundle }}/config/coordinator.json', dest: /etc/begom/coordinator.json, owner: begom-publisher, mode: '0400'}
+    - ansible.builtin.copy: {src: '{{ begom_binaries }}/coordinator', dest: /usr/local/bin/begom-coordinator, mode: '0755'}
+    - ansible.builtin.file: {path: /var/lib/begom/packages, state: directory, owner: root, group: begom-media, mode: '0750'}
+    - ansible.builtin.template: {src: begom-coordinator.service.j2, dest: /etc/systemd/system/begom-coordinator.service, mode: '0644'}
+    - ansible.builtin.systemd_service: {name: begom-coordinator, daemon_reload: true, enabled: true, state: started}
+    - ansible.builtin.include_tasks: nginx.yml
+
+- name: Install each isolated agent and restricted SSH helper
+  hosts: agents
+  become: true
+  tasks:
+    - ansible.builtin.file: {path: '/opt/begom/releases/1.0.0', state: directory, owner: root, mode: '0755'}
+    - ansible.builtin.copy: {src: '{{ begom_binaries }}/agent', dest: '/opt/begom/releases/1.0.0/agent', mode: '0755'}
+    - ansible.builtin.file: {src: /opt/begom/releases/1.0.0, dest: /opt/begom/current, state: link, force: false}
+    - ansible.builtin.copy: {src: '{{ begom_binaries }}/node-helper', dest: /usr/local/libexec/begom-node-helper, mode: '0755'}
+    - ansible.builtin.copy: {src: '{{ begom_bundle }}/secrets/package.pub', dest: /etc/begom/package.pub, mode: '0444'}
+    - ansible.builtin.copy: {src: '{{ begom_bundle }}/config/{{ inventory_hostname }}.json', dest: /etc/begom/agent.json, owner: 'begom-{{ inventory_hostname }}', mode: '0400'}
+    - ansible.builtin.copy:
+        src: '{{ begom_bundle }}/secrets/{{ inventory_hostname }}-{{ item.src }}'
+        dest: '/etc/begom/{{ item.dest }}'
+        owner: 'begom-{{ inventory_hostname }}'
+        mode: '0400'
+      loop: [{src: role-id, dest: role-id}, {src: secret-id, dest: secret-id}, {src: key, dest: agent.key}, {src: crt, dest: agent.crt}]
+      no_log: true
+    - ansible.builtin.user: {name: begom-admin, shell: /bin/sh, create_home: true, groups: systemd-journal, append: true}
+    - ansible.builtin.file: {path: /home/begom-admin/.ssh, state: directory, owner: begom-admin, mode: '0700'}
+    - ansible.builtin.copy:
+        content: 'restrict {{ lookup("ansible.builtin.file", begom_bundle + "/secrets/" + inventory_hostname + "-ssh-client.pub") }}\n'
+        dest: /home/begom-admin/.ssh/authorized_keys
+        owner: begom-admin
+        mode: '0600'
+    - name: Install the host key already pinned in the coordinator's worker inventory
+      ansible.builtin.copy: {src: '{{ begom_bundle }}/secrets/{{ inventory_hostname }}-ssh-host.key', dest: /etc/ssh/ssh_host_ed25519_key, mode: '0600'}
+      no_log: true
+    - ansible.builtin.copy: {src: ssh-begom.conf, dest: /etc/ssh/sshd_config.d/60-begom.conf, mode: '0644'}
+    - ansible.builtin.copy: {src: sudoers-begom, dest: /etc/sudoers.d/begom, mode: '0440', validate: '/usr/sbin/visudo -cf %s'}
+    - ansible.builtin.command: {argv: [sshd, -t]}
+      changed_when: false
+    - ansible.builtin.service: {name: ssh, state: reloaded}
+    - ansible.builtin.template: {src: begom-agent.service.j2, dest: /etc/systemd/system/begom-agent.service, mode: '0644'}
+    - ansible.builtin.systemd_service: {name: begom-agent, daemon_reload: true, enabled: true, state: started}
+
+- name: Install scheduled encrypted backup on an independent host
+  hosts: backup
+  become: true
+  tasks:
+    - ansible.builtin.include_tasks: backup.yml
+
+- name: Apply private network restrictions without touching the existing SSH rule
+  hosts: all
+  become: true
+  tasks:
+    - ansible.builtin.include_tasks: observability-agent.yml
+      when: inventory_hostname not in groups["control"]
+    - ansible.builtin.include_tasks: firewall.yml

@@ -1,0 +1,61 @@
+groups:
+  - name: begom
+    rules:
+      - alert: ServiceUnavailable
+        expr: up == 0
+        for: 10s
+        labels: {severity: critical}
+        annotations: {summary: 'Недоступен {{ $labels.job }} / {{ $labels.instance }}'}
+      - alert: WorkerHeartbeatMissing
+        expr: time() - begom_worker_heartbeat_timestamp_seconds > 4
+        for: 2s
+        labels: {severity: critical}
+        annotations: {summary: 'Нет heartbeat: {{ $labels.worker }}'}
+      - alert: WorkerStorageLow
+        expr: begom_worker_storage_free_bytes < 33554432
+        for: 5s
+        labels: {severity: warning}
+        annotations: {summary: 'Мало свободного места: {{ $labels.worker }}'}
+      - alert: WorkerCPUHigh
+        expr: begom_worker_cpu_percent > 85
+        for: 30s
+        labels: {severity: warning}
+        annotations: {summary: 'Высокая загрузка CPU: {{ $labels.worker }}'}
+      - alert: WorkerRAMHigh
+        expr: begom_worker_ram_used_bytes / begom_worker_ram_total_bytes > 0.9
+        for: 30s
+        labels: {severity: warning}
+        annotations: {summary: 'Высокая загрузка RAM: {{ $labels.worker }}'}
+      - alert: JobNoProgress
+        expr: (time() - begom_job_last_progress_timestamp_seconds > 120) and on(job) begom_job_state{state="running"}
+        for: 30s
+        labels: {severity: warning}
+        annotations: {summary: 'Задание не продвигается: {{ $labels.job }}'}
+      - alert: AgentVersionMismatch
+        expr: begom_worker_version{version!="1.0.0"} > 0
+        for: 10s
+        labels: {severity: critical}
+        annotations: {summary: 'Несовместимая версия агента: {{ $labels.worker }}'}
+      - alert: ProcessingRateDropped
+        expr: rate(begom_job_processed[1m]) < 0.2 * rate(begom_job_processed[10m]) and on(job) begom_job_state{state="running"}
+        for: 1m
+        labels: {severity: warning}
+        annotations: {summary: 'Резко снизилась скорость задания: {{ $labels.job }}'}
+      - alert: DonorRateLimited
+        expr: sum(rate(begom_http_requests_total{status_class="429"}[1m])) > 0
+        for: 5s
+        labels: {severity: warning}
+        annotations: {summary: 'Донор ограничивает запросы; C6 уменьшает нагрузку'}
+      - alert: MetricsStale
+        expr: time() - begom_agent_measurement_timestamp_seconds > 5
+        for: 2s
+        labels: {severity: warning}
+        annotations: {summary: 'Оперативное измерение старше пяти секунд'}
+      - alert: AgentErrors
+        expr: increase(begom_agent_errors_total[1m]) > 10
+        labels: {severity: warning}
+        annotations: {summary: 'Увеличилось число ошибок агента'}
+      - alert: FluentBitDroppedRecords
+        expr: sum(increase(fluentbit_output_dropped_records_total[5m])) > 0
+        labels: {severity: critical}
+        annotations: {summary: 'Fluent Bit теряет записи: проверить буфер и Loki'}
