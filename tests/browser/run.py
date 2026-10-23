@@ -33,7 +33,9 @@ try:
         browser = pw.chromium.launch(**options)
         # The stand uses a private generated CA. Go integration tests verify TLS
         # trust separately; no OS trust store is modified by this UI suite.
-        context = browser.new_context(ignore_https_errors=True, viewport={'width': 1440, 'height': 1000})
+        # Headless Shell can inherit en-US@posix from a CI host. Grafana uses
+        # Intl.NumberFormat, which requires a valid BCP 47 language tag.
+        context = browser.new_context(ignore_https_errors=True, locale='ru-RU', viewport={'width': 1440, 'height': 1000})
         page = context.new_page()
         errors = []
         page.on('pageerror', lambda error: errors.append(str(error)))
@@ -60,12 +62,20 @@ try:
         home = context.request.get(cfg['url']+'/grafana/api/dashboards/home')
         check('grafana_home_redirect', home.status == 200 and home.json().get('redirectUri', '').startswith('/grafana/d/default-home-dashboard/'))
         grafana = context.new_page()
-        grafana.goto(cfg['url']+'/grafana/')
-        expect(grafana.get_by_text('Доступность сервисов', exact=True)).to_be_visible(timeout=30000)
-        check('grafana_home_is_begom', True)
-        grafana.goto(cfg['url']+'/grafana/d/begom/begom')
-        expect(grafana.get_by_text('Доступность сервисов', exact=True)).to_be_visible(timeout=30000)
-        check('grafana_dashboard_visible', True)
+        grafana_errors = []
+        grafana.on('pageerror', lambda error: grafana_errors.append(str(error)))
+        grafana.on('console', lambda message: grafana_errors.append(message.text) if message.type == 'error' else None)
+        try:
+            grafana.goto(cfg['url']+'/grafana/')
+            expect(grafana.get_by_text('Доступность сервисов', exact=True)).to_be_visible(timeout=30000)
+            check('grafana_home_is_begom', True)
+            grafana.goto(cfg['url']+'/grafana/d/begom/begom')
+            expect(grafana.get_by_text('Доступность сервисов', exact=True)).to_be_visible(timeout=30000)
+            check('grafana_dashboard_visible', True)
+        except Exception:
+            grafana.screenshot(path=str(out/'grafana-failure.png'), full_page=True)
+            report['grafana_failure'] = {'url': grafana.url, 'text': grafana.locator('body').inner_text(), 'javascript_errors': grafana_errors}
+            raise
         grafana.close()
         r = context.request.get(cfg['url']+'/grafana/api/datasources/proxy/uid/prometheus/api/v1/query', params={'query': 'begom_worker_cpu_percent'})
         series = r.json().get('data', {}).get('result', [])
@@ -135,7 +145,7 @@ try:
         viewer = api('/users', 'POST', {'username': username, 'password': password, 'roles': ['viewer'], 'enabled': True})
         no_csrf = context.request.post(cfg['url']+'/api/jobs/'+job+'/start', data={}, headers={'Idempotency-Key': secrets.token_hex(16)})
         check('csrf_rejected', no_csrf.status == 403)
-        viewer_context = browser.new_context(ignore_https_errors=True)
+        viewer_context = browser.new_context(ignore_https_errors=True, locale='ru-RU')
         r = viewer_context.request.post(cfg['url']+'/api/auth/login', data={'username': username, 'password': password})
         check('viewer_login', r.status == 200)
         vcsrf = r.json()['csrf_token']
@@ -158,7 +168,7 @@ try:
         check('viewer_downloads_published_video', download.failure() is None and download.suggested_filename == 'begom-7778.mp4' and len(data) == int(video['size_bytes']) and hashlib.sha256(data).hexdigest() == video['checksum'], {'bytes': len(data), 'filename': download.suggested_filename})
         r = viewer_context.request.get(content_url, headers={'Range': 'bytes=0-31'})
         check('viewer_video_range', r.status == 206 and r.body() == data[:32])
-        anonymous = browser.new_context(ignore_https_errors=True)
+        anonymous = browser.new_context(ignore_https_errors=True, locale='ru-RU')
         r = anonymous.request.get(content_url)
         check('video_requires_login', r.status == 401)
         anonymous.close()

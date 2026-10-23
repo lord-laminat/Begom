@@ -42,6 +42,13 @@
     "deploy/grafana/dashboards/begom.json": "36e9389f7c7ec55b1fa8243ff8923dd263d6b356d3484a15e23a97fa1fd09fc8",
     "internal/webui/assets/index.html": "b5e5de54674deca3c8639c844eb601b55f36258179196a93f436fae1b0b59250",
     "internal/webui/assets/app.js": "4252de371ddb8cffd35fcc2beadf3bdd7090f404fac4744f8811d922e5cdb587",
-    "tests/browser/run.py": "6530190712c9778d636fd9071356840ecf935b8679813d7d49e98872b384aaf0"
+    "tests/browser/run.py": "d77bf061f893ac08772b001f3df183971bc02d9b894b4d0dcc2bedc4b10d706c"
+  },
+  "browser_locale_regression": {
+    "measured_at": "2026-10-23T12:11:32.607180+00:00",
+    "browser": "Chromium Headless Shell 141.0.7390.37",
+    "without_explicit_locale": "reproduced: RangeError Invalid language tag en-US@posix in Grafana Intl.NumberFormat",
+    "with_locale_ru_RU": "passed: home and saved dashboards, Prometheus and Loki",
+    "full_browser_suite_local": "not run on real donor profile"
   }
 }
