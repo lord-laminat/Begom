@@ -183,18 +183,32 @@
     - ansible.builtin.user: {name: begom-admin, shell: /bin/sh, create_home: true, groups: systemd-journal, append: true}
     - ansible.builtin.file: {path: /home/begom-admin/.ssh, state: directory, owner: begom-admin, mode: '0700'}
     - ansible.builtin.copy:
-        content: 'restrict {{ lookup("ansible.builtin.file", begom_bundle + "/secrets/" + inventory_hostname + "-ssh-client.pub") }}\n'
+        content: 'restrict,command="/usr/local/libexec/begom-node-helper ssh" {{ lookup("ansible.builtin.file", begom_bundle + "/secrets/" + inventory_hostname + "-ssh-client.pub") }}\n'
         dest: /home/begom-admin/.ssh/authorized_keys
         owner: begom-admin
         mode: '0600'
-    - name: Install the host key already pinned in the coordinator's worker inventory
-      ansible.builtin.copy: {src: '{{ begom_bundle }}/secrets/{{ inventory_hostname }}-ssh-host.key', dest: /etc/ssh/ssh_host_ed25519_key, mode: '0600'}
+    - name: Install the dedicated host key without replacing the provisioning SSH identity
+      ansible.builtin.copy: {src: '{{ begom_bundle }}/secrets/{{ inventory_hostname }}-ssh-host.key', dest: /etc/begom/ssh-host.key, mode: '0600'}
       no_log: true
-    - ansible.builtin.copy: {src: ssh-begom.conf, dest: /etc/ssh/sshd_config.d/60-begom.conf, mode: '0644'}
+    - ansible.builtin.copy: {src: ssh-begom.conf, dest: /etc/begom/sshd_config, mode: '0644'}
     - ansible.builtin.copy: {src: sudoers-begom, dest: /etc/sudoers.d/begom, mode: '0440', validate: '/usr/sbin/visudo -cf %s'}
-    - ansible.builtin.command: {argv: [sshd, -t]}
+    - ansible.builtin.command: {argv: [sshd, -t, -f, /etc/begom/sshd_config]}
       changed_when: false
-    - ansible.builtin.service: {name: ssh, state: reloaded}
+    - ansible.builtin.copy:
+        dest: /etc/systemd/system/begom-sshd.service
+        mode: '0644'
+        content: |
+          [Unit]
+          Description=Restricted Begom SSH management endpoint
+          After=network.target
+          [Service]
+          ExecStartPre=/usr/sbin/sshd -t -f /etc/begom/sshd_config
+          ExecStart=/usr/sbin/sshd -D -e -f /etc/begom/sshd_config
+          Restart=on-failure
+          RestartSec=2s
+          [Install]
+          WantedBy=multi-user.target
+    - ansible.builtin.systemd_service: {name: begom-sshd, daemon_reload: true, enabled: true, state: started}
     - ansible.builtin.template: {src: begom-agent.service.j2, dest: /etc/systemd/system/begom-agent.service, mode: '0644'}
     - ansible.builtin.systemd_service: {name: begom-agent, daemon_reload: true, enabled: true, state: started}
 

@@ -1,7 +1,7 @@
 {
   "algorithm": "sha256",
-  "file_count": 140,
-  "source_tree_sha256": "34c9be564a8f505b61ba0b0e022f8fd73b4d7ed90de538ac77f8af6797acc4fa",
+  "file_count": 141,
+  "source_tree_sha256": "d40e189699b376539c1d4fd5b11e2ffbf423a9eb5d3264dee03fca8d42aef17d",
   "files": [
     {
       "path": ".dockerignore",
@@ -65,7 +65,7 @@
     },
     {
       "path": "deploy/ansible/files/ssh-begom.conf",
-      "sha256": "7a4a937384361d2548e7da87cb05b771d9ca52feefd9908068510ea44c7c3282"
+      "sha256": "563ed62d9496a690458391f3e497227432308e628e28a7d87b1ce12b878b5660"
     },
     {
       "path": "deploy/ansible/files/sudoers-begom",
@@ -109,7 +109,7 @@
     },
     {
       "path": "deploy/ansible/site.yml",
-      "sha256": "3de019ce7662ff7b4a4ab74dd12d0cbc805a80cfaa923ec40a0ae9b0286c8957"
+      "sha256": "59dcaf02ca3fa474b8ddef5be65c5c56ba96fce39d6617e32c8f3b805967979f"
     },
     {
       "path": "deploy/ansible/templates/begom-agent.service.j2",
@@ -133,7 +133,7 @@
     },
     {
       "path": "deploy/ansible/templates/firewall.nft.j2",
-      "sha256": "7855be5b65ddb7ad89b33b05cec7baf3d048b52bcad232f192b3443b751b8308"
+      "sha256": "4616f8a5e612ac0270daea74ba596edb5b75af6fb0c1939ab387453dc096b2bf"
     },
     {
       "path": "deploy/ansible/templates/fluent-bit.conf.j2",
@@ -285,7 +285,11 @@
     },
     {
       "path": "internal/bootstrap/linux.go",
-      "sha256": "6a5ae2f8b1d5f4e22567efbc10bef718049f8563f99e8e340103b9b3c9b8159f"
+      "sha256": "5852f41c8d3d5a42ce72869e8f04c9662252a186b8a203f4bb3243a97781a956"
+    },
+    {
+      "path": "internal/bootstrap/linux_test.go",
+      "sha256": "97d1be74c4fe4b4e5b5395cf56fc3aa9b9373fb75449440fafad9a4c36f483ed"
     },
     {
       "path": "internal/bootstrap/package.go",

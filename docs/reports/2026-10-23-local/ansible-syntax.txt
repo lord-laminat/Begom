@@ -1,4 +1,2 @@
 
 playbook: deploy/ansible/site.yml
-
-playbook: deploy/ansible/acceptance.yml

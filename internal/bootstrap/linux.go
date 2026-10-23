@@ -116,7 +116,7 @@ func InitLinux(dir string, p LinuxProfile) error {
 	}
 	for i := range c.Workers {
 		c.Workers[i].Host = p.Workers[i]
-		c.Workers[i].SSHPort = 22
+		c.Workers[i].SSHPort = 2222
 		c.Workers[i].MinFreeBytes = 1 << 30
 		c.Workers[i].StoragePath = c.Storage.Root
 	}

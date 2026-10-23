@@ -9,7 +9,7 @@ go test -race ./...
 ok  	github.com/rychkin/Begom/internal/agent	(cached)
 ok  	github.com/rychkin/Begom/internal/auth	(cached)
 ?   	github.com/rychkin/Begom/internal/backup	[no test files]
-?   	github.com/rychkin/Begom/internal/bootstrap	[no test files]
+ok  	github.com/rychkin/Begom/internal/bootstrap	1.212s
 ok  	github.com/rychkin/Begom/internal/config	(cached)
 ok  	github.com/rychkin/Begom/internal/coordinator	(cached)
 ?   	github.com/rychkin/Begom/internal/db	[no test files]
@@ -29,4 +29,4 @@ ok  	github.com/rychkin/Begom/internal/storage	(cached)
 ok  	github.com/rychkin/Begom/internal/target	(cached)
 ?   	github.com/rychkin/Begom/internal/webui	[no test files]
 ?   	github.com/rychkin/Begom/internal/wire	[no test files]
-ok  	github.com/rychkin/Begom/tools/openapi	1.131s
+ok  	github.com/rychkin/Begom/tools/openapi	1.127s

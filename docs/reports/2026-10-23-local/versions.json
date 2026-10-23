@@ -1,5 +1,5 @@
 {
-  "recorded_at": "2026-10-23T08:49:30.281349+00:00",
+  "recorded_at": "2026-10-23T09:08:48.316570+00:00",
   "profile": "compose-mock-local",
   "independent_hosts": 1,
   "agents": 3,
@@ -15,7 +15,7 @@
     {
       "service": "coordinator",
       "reference": "begom-app:1.0.0",
-      "image_id": "sha256:86a7dc0bd4f16b59f1a7fa77f84656bb26e0a6f29bdc3ca3bf1d2006e4106e3f"
+      "image_id": "sha256:6e04afe8fa08466c07b1921e2a2c832792a0d9363751e18fbbc6ca9241ce37cf"
     },
     {
       "service": "fluent-bit",
@@ -35,7 +35,7 @@
     {
       "service": "mockdonor",
       "reference": "begom-app:1.0.0",
-      "image_id": "sha256:86a7dc0bd4f16b59f1a7fa77f84656bb26e0a6f29bdc3ca3bf1d2006e4106e3f"
+      "image_id": "sha256:6e04afe8fa08466c07b1921e2a2c832792a0d9363751e18fbbc6ca9241ce37cf"
     },
     {
       "service": "nginx",
@@ -55,7 +55,7 @@
     {
       "service": "postgres",
       "reference": "begom-postgres:18.6",
-      "image_id": "sha256:ab84374fb68e3f557d2f695812a846b571facea46168c03e7e1ceac16efb3b5e"
+      "image_id": "sha256:31dbe5778acc9611278759f23b2e1c1bf162b844fc5ffe40d7179afc219840ba"
     },
     {
       "service": "postgres-exporter",
@@ -70,17 +70,17 @@
     {
       "service": "worker-1",
       "reference": "begom-app:1.0.0",
-      "image_id": "sha256:86a7dc0bd4f16b59f1a7fa77f84656bb26e0a6f29bdc3ca3bf1d2006e4106e3f"
+      "image_id": "sha256:6e04afe8fa08466c07b1921e2a2c832792a0d9363751e18fbbc6ca9241ce37cf"
     },
     {
       "service": "worker-2",
       "reference": "begom-app:1.0.0",
-      "image_id": "sha256:86a7dc0bd4f16b59f1a7fa77f84656bb26e0a6f29bdc3ca3bf1d2006e4106e3f"
+      "image_id": "sha256:6e04afe8fa08466c07b1921e2a2c832792a0d9363751e18fbbc6ca9241ce37cf"
     },
     {
       "service": "worker-3",
       "reference": "begom-app:1.0.0",
-      "image_id": "sha256:86a7dc0bd4f16b59f1a7fa77f84656bb26e0a6f29bdc3ca3bf1d2006e4106e3f"
+      "image_id": "sha256:6e04afe8fa08466c07b1921e2a2c832792a0d9363751e18fbbc6ca9241ce37cf"
     }
   ]
 }
