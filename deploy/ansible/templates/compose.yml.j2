@@ -58,6 +58,7 @@ services:
       GF_USERS_ALLOW_SIGN_UP: 'false'
       GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/admin-password
       GF_DASHBOARDS_MIN_REFRESH_INTERVAL: 1s
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/begom.json
       GF_LOG_CONSOLE_FORMAT: json
       GF_METRICS_ENABLED: 'true'
       GF_ANALYTICS_REPORTING_ENABLED: 'false'
@@ -65,7 +66,7 @@ services:
       GF_PLUGINS_PREINSTALL_DISABLED: 'true'
     volumes: [/etc/begom-infra/grafana/provisioning:/etc/grafana/provisioning:ro, /etc/begom-infra/grafana/dashboards:/var/lib/grafana/dashboards:ro, /var/lib/begom-infra/grafana:/var/lib/grafana, /etc/begom-infra/secrets/grafana-password:/run/secrets/admin-password:ro]
     extra_hosts: ['prometheus:127.0.0.1', 'loki:127.0.0.1']
-    mem_limit: 512m
+    mem_limit: 1g
   fluent-bit:
     <<: *service
     image: cr.fluentbit.io/fluent/fluent-bit:5.1.5@sha256:2740f387f6e68fab66d28e4fa6a853387b9cab6ffb4cb78958f69bba4eb0e7b4

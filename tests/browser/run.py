@@ -2,6 +2,7 @@
 Run only on an initialized mock test stand. No credentials enter the report.
 """
 import argparse
+import hashlib
 import json
 import secrets
 import time
@@ -55,6 +56,22 @@ try:
         snapshot = api('/snapshot')
         check('mock_only', snapshot.get('source_profile', {}).get('mock') is True)
         check('three_registered_agents', len([w for w in snapshot['workers'] if w['online']]) >= 3)
+        expect(page.get_by_role('link', name='Grafana ↗')).to_have_attribute('href', '/grafana/d/begom/begom')
+        home = context.request.get(cfg['url']+'/grafana/api/dashboards/home')
+        check('grafana_home_redirect', home.status == 200 and home.json().get('redirectUri', '').startswith('/grafana/d/default-home-dashboard/'))
+        grafana = context.new_page()
+        grafana.goto(cfg['url']+'/grafana/')
+        expect(grafana.get_by_text('Доступность сервисов', exact=True)).to_be_visible(timeout=30000)
+        check('grafana_home_is_begom', True)
+        grafana.goto(cfg['url']+'/grafana/d/begom/begom')
+        expect(grafana.get_by_text('Доступность сервисов', exact=True)).to_be_visible(timeout=30000)
+        check('grafana_dashboard_visible', True)
+        grafana.close()
+        r = context.request.get(cfg['url']+'/grafana/api/datasources/proxy/uid/prometheus/api/v1/query', params={'query': 'begom_worker_cpu_percent'})
+        series = r.json().get('data', {}).get('result', [])
+        check('grafana_prometheus_worker_metrics', r.status == 200 and len(series) == 3)
+        r = context.request.get(cfg['url']+'/grafana/api/datasources/proxy/uid/loki/loki/api/v1/query_range', params={'query': '{service=~".+"} | json', 'limit': '1'})
+        check('grafana_loki_logs', r.status == 200 and bool(r.json().get('data', {}).get('result')))
         page.locator('[data-tab=workers]').click()
         expect(page.locator('#worker-list .worker')).to_have_count(len(snapshot['workers']))
         ages = []
@@ -104,6 +121,15 @@ try:
         expect(page.locator('#results-list')).to_contain_text(payload)
         check('metadata_XSS_escaped', page.locator('#results-list img').count() == 0 and page.evaluate('window.__begomXss') is None)
         page.locator('#results-dialog [data-close]').click()
+        download_job = api('/jobs', 'POST', {'range_text': '[7778,7778]', 'worker_ids': ['worker-1'], 'threads_default': 1})['job_id']
+        api('/jobs/'+download_job+'/start', 'POST', {})
+        deadline = time.monotonic()+45
+        while time.monotonic() < deadline and api('/jobs/'+download_job)['state'] != 'completed':
+            page.wait_for_timeout(250)
+        results = api('/jobs/'+download_job+'/items')['items']
+        check('published_video_for_client', len(results) == 1 and results[0]['status'] == 'completed' and bool(results[0].get('file_id')))
+        video = results[0]
+        content_url = cfg['url']+'/api/files/'+video['file_id']+'/content'
         password = secrets.token_urlsafe(24)
         username = 'browser-'+secrets.token_hex(4)
         viewer = api('/users', 'POST', {'username': username, 'password': password, 'roles': ['viewer'], 'enabled': True})
@@ -117,6 +143,27 @@ try:
         check('acl_hides_unassigned_job', r.status == 404)
         r = viewer_context.request.get(cfg['url']+'/api/audit')
         check('audit_administrator_only', r.status == 403)
+        r = viewer_context.request.get(content_url)
+        check('video_acl_hides_unassigned_file', r.status == 404)
+        api('/jobs/'+download_job+'/access', 'PUT', {'user_id': viewer['user_id'], 'permission': 'view'})
+        viewer_page = viewer_context.new_page()
+        viewer_page.goto(cfg['url'])
+        expect(viewer_page.locator('#workspace')).to_be_visible(timeout=20000)
+        viewer_page.locator('[data-job-id="'+download_job+'"]').get_by_role('button', name='Результаты', exact=True).click()
+        expect(viewer_page.locator('#results-list').get_by_role('button', name='Смотреть', exact=True)).to_be_visible()
+        with viewer_page.expect_download(timeout=20000) as pending:
+            viewer_page.locator('#results-list').get_by_role('link', name='Скачать', exact=True).click()
+        download = pending.value
+        data = Path(download.path()).read_bytes()
+        check('viewer_downloads_published_video', download.failure() is None and download.suggested_filename == 'begom-7778.mp4' and len(data) == int(video['size_bytes']) and hashlib.sha256(data).hexdigest() == video['checksum'], {'bytes': len(data), 'filename': download.suggested_filename})
+        r = viewer_context.request.get(content_url, headers={'Range': 'bytes=0-31'})
+        check('viewer_video_range', r.status == 206 and r.body() == data[:32])
+        anonymous = browser.new_context(ignore_https_errors=True)
+        r = anonymous.request.get(content_url)
+        check('video_requires_login', r.status == 401)
+        anonymous.close()
+        r = viewer_context.request.get(cfg['url']+'/grafana/api/search')
+        check('grafana_administrator_only', r.status == 403)
         api('/jobs/'+job+'/access', 'PUT', {'user_id': viewer['user_id'], 'permission': 'view'})
         r = viewer_context.request.get(cfg['url']+'/api/jobs/'+job)
         check('acl_grants_view', r.status == 200)
