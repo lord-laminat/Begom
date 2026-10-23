@@ -54,6 +54,30 @@ func (b *baoAPI) call(ctx context.Context, method, path string, v, out any) erro
 	}
 	return nil
 }
+
+func (b *baoAPI) waitActive(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+	tick := time.NewTicker(200 * time.Millisecond)
+	defer tick.Stop()
+	for {
+		var health struct {
+			Initialized        bool `json:"initialized"`
+			Sealed             bool `json:"sealed"`
+			Standby            bool `json:"standby"`
+			PerformanceStandby bool `json:"performance_standby"`
+		}
+		if e := b.call(ctx, "GET", "/v1/sys/health", nil, &health); e == nil && health.Initialized && !health.Sealed && !health.Standby && !health.PerformanceStandby {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("OpenBao did not become active after unseal: %w", ctx.Err())
+		case <-tick.C:
+		}
+	}
+}
+
 func BaoInit(ctx context.Context, dir, endpoint string) error {
 	tc, e := wire.TLS(config.TLS{CA: filepath.Join(dir, "secrets/ca.crt")}, false)
 	if e != nil {
@@ -115,6 +139,12 @@ func BaoInit(ctx context.Context, dir, endpoint string) error {
 				return e
 			}
 		}
+	}
+	// Unseal returns before Raft leadership and writable storage are ready.
+	// Wait before checking the seed marker as well: resumed deployments must
+	// not start the coordinator against a read-only standby node.
+	if e = api.waitActive(ctx); e != nil {
+		return e
 	}
 	api.token = keys.RootToken
 	if _, e = os.Stat(filepath.Join(dir, "bootstrap/bao.seeded")); e == nil {
