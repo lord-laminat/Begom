@@ -137,3 +137,96 @@ func TestDispatcherConcurrentJournalAndRecovery(t *testing.T) {
 	}
 	cancel()
 }
+
+func TestDispatcherInterruptedAttemptPreservesDonorQuota(t *testing.T) {
+	x := setup(t)
+	x.s.Lease = 30 * time.Second
+	job := x.job(t, "[0,79]", 80)
+	worker := x.workers[0]
+	lease := x.lease(t, worker)
+	if lease == nil {
+		t.Fatal("missing lease")
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+	ep, err := x.s.AcquireEpoch(ctx, dispatch.DrainInterval)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ep.GuardUntil = time.Now().Add(-time.Second)
+	go ep.Run(ctx)
+	d := dispatch.New(x.s, ep, model.Limits{RPS: 200, Connections: 120})
+	if err = d.Restore(ctx); err != nil {
+		t.Fatal(err)
+	}
+	requests := make([]string, 7)
+	for i := range requests {
+		requests[i] = model.NewID()
+		_, _, err = d.Request(ctx, worker, model.PermitRequest{LeaseRef: lease.Ref(), RequestUID: requests[i], Class: "check"})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	go d.Run(ctx)
+	permits := make([]*model.Permit, len(requests))
+	for i, uid := range requests {
+		for permits[i] == nil {
+			if ctx.Err() != nil {
+				t.Fatal("dispatcher did not issue all permits", ctx.Err())
+			}
+			value, _, err := d.Get(worker, uid)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var out struct {
+				Permit *model.Permit `json:"permit"`
+			}
+			if err = json.Unmarshal(db.JSON(value), &out); err != nil {
+				t.Fatal(err)
+			}
+			permits[i] = out.Permit
+			if permits[i] == nil {
+				time.Sleep(5 * time.Millisecond)
+			}
+		}
+	}
+	release := func(i int, feedback model.Feedback) {
+		t.Helper()
+		mutate(t, x.s, worker, "release-"+permits[i].ConnectionID, feedback, func(tx pgx.Tx) (any, int, error) {
+			return map[string]bool{"released": true}, 200, d.ReleaseTx(ctx, tx, worker, permits[i].ConnectionID, feedback)
+		})
+		d.FinalizeRelease(worker, permits[i].ConnectionID)
+	}
+	// Genuine transport failures under a current lease must still reduce load.
+	for i := 0; i < 3; i++ {
+		release(i, model.Feedback{Status: 0})
+	}
+	state, err := x.s.QuotaState(ctx)
+	if err != nil || state.Factor != .7 || state.Errors != 0 {
+		t.Fatal("current transport failures did not reduce quota", state, err)
+	}
+	mutate(t, x.s, x.user, "stop", job, func(tx pgx.Tx) (any, int, error) {
+		return x.s.Act(ctx, tx, x.user, "req", job, "stop")
+	})
+	for i := 3; i < 6; i++ {
+		release(i, model.Feedback{Status: 0})
+	}
+	state, err = x.s.QuotaState(ctx)
+	if err != nil || state.Factor != .7 || state.Errors != 0 {
+		t.Fatal("stopped attempts changed existing donor backoff", state, err)
+	}
+	stats := d.Stats()
+	if stats.Requests["check:network"] != 3 || stats.Requests["check:cancelled"] != 3 || stats.Active != 1 {
+		t.Fatal("cancelled requests were not released or classified separately", stats)
+	}
+	// A real donor response remains meaningful even if the job stopped meanwhile.
+	release(6, model.Feedback{Status: 429, RetryAfterMS: 60000})
+	restored := dispatch.New(x.s, ep, model.Limits{RPS: 200})
+	if err = restored.Restore(ctx); err != nil {
+		t.Fatal(err)
+	}
+	stats = restored.Stats()
+	if stats.Factor != .35 || time.Until(stats.Cooldown) < 50*time.Second {
+		t.Fatal("late donor feedback or persisted backoff was discarded", stats)
+	}
+}

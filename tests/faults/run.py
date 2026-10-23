@@ -77,10 +77,26 @@ try:
     check('no_other_active_jobs', not [j for j in snapshot['jobs'] if j['state'] in ['running', 'pausing', 'stopping']])
     nodes = [w['worker_id'] for w in snapshot['workers'] if w['online']][:3]
     check('three_agents', len(nodes) == 3)
-    body = {'range_text': '[4000,6999]', 'worker_ids': nodes, 'threads_default': 40, 'block_size': 1000, 'retry_policy': {'max_retries': 4}, 'http_timeout_ms': 20000}
+    check('idle_donor', wait(lambda: stats()['active'] == 0, 15))
+    # Own the fixture instead of inheriting browser cases. Twelve seconds also
+    # allows forty overlapping requests under the minimum adaptive source rate
+    # (80 RPS * 0.1, paced over the permit window). Do not reset SQL quota state.
+    workload = {'delay_ms': 12000, 'demo': False, 'reset': True, 'cases': {}}
+    control = urllib.request.Request(cfg['mock_url']+'/control', method='PUT',
+                                    data=json.dumps(workload).encode(),
+                                    headers={'Content-Type': 'application/json',
+                                             'Authorization': 'Bearer '+Path(cfg['mock_token_file']).read_text().strip()})
+    with urllib.request.urlopen(control, timeout=5) as response:
+        check('controlled_fault_workload', response.status == 200,
+              {'delay_ms': workload['delay_ms'], 'source_factor': snapshot['dispatcher']['Factor']})
+    body = {'range_text': '[4000,6999]', 'worker_ids': nodes, 'threads_default': 40,
+            'block_size': 1000, 'retry_policy': {'max_retries': 4}, 'http_timeout_ms': 20000,
+            'stop_conditions': {'no_workers_seconds': 180}}
     job = request('/jobs', 'POST', body)['job_id']
+    report['job_id'] = job
     request('/jobs/'+job+'/start', 'POST', {})
-    check('load_started', wait(lambda: stats()['active'] >= 40, 30))
+    check('load_started', wait(lambda: stats()['active'] >= 40, 30),
+          {'peak': stats()['peak'], 'requests': stats()['requests']})
 
     compose('stop', '--timeout', '0', 'postgres')
     stopped.add('postgres')
@@ -109,8 +125,16 @@ try:
     stopped.remove('openbao')
     compose('run', '--rm', '--no-deps', 'bootstrap')
     check('OpenBao_unseal_and_recovery', wait(ready, 60))
+    check('processing_resumes_after_OpenBao_recovery',
+          wait(lambda: request('/jobs/'+job)['state'] == 'running' and stats()['active'] > 0, 45))
     request('/jobs/'+job+'/stop', 'POST', {})
     check('job_stops_after_dependency_recovery', wait(lambda: request('/jobs/'+job)['state'] == 'stopped', 15))
+except Exception as error:
+    report['status'] = 'failed'
+    report['error_type'] = type(error).__name__
+    raise
+else:
+    report['status'] = 'passed'
 finally:
     if marker_offline:
         compose('run', '--rm', '--no-deps', '--entrypoint', '/bin/mv', 'permissions', '/bootstrap/storage/.begom-volume.offline-test', '/bootstrap/storage/.begom-volume')

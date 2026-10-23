@@ -6,6 +6,9 @@ on:
     branches: [develop, main, 'feat/**', 'fix/**', 'test/**']
 permissions:
   contents: read
+defaults:
+  run:
+    shell: bash
 jobs:
   go:
     runs-on: ubuntu-24.04

@@ -36,6 +36,7 @@ type slot struct {
 	expires         time.Time
 	class           string
 	feedback        *model.Feedback
+	cancelled       bool
 }
 type duration struct {
 	sum   float64
@@ -283,6 +284,19 @@ func (d *Dispatcher) release(ctx context.Context, q db.Queryer, worker, id strin
 	if s.worker != worker {
 		return db.Forbidden()
 	}
+	// An interrupted request from a stopped job, expired attempt or disabled
+	// worker does not describe donor health. Keep journaling the release while
+	// retaining the backoff caused by genuine donor failures.
+	cancelled := false
+	if f.Status == 0 {
+		if _, err := d.Store.CheckLeaseWith(ctx, q, worker, s.ref); err != nil {
+			var de *db.Error
+			if !errors.As(err, &de) || de.Code != "stale_attempt" {
+				return err
+			}
+			cancelled = true
+		}
+	}
 	digest := fmt.Sprintf("%x", sha256.Sum256(db.JSON(f)))
 	var inserted string
 	err := q.QueryRow(ctx, "INSERT INTO donor_feedback(connection_id,source_id,worker_id,body_hash) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING RETURNING connection_id", id, d.Store.SourceID, worker, digest).Scan(&inserted)
@@ -315,7 +329,7 @@ func (d *Dispatcher) release(ctx context.Context, q db.Queryer, worker, id strin
 		}
 		d.factor = math.Max(.1, d.factor*.5)
 		d.lastIncrease = time.Now()
-	} else if f.Status >= 500 || f.Status == 0 {
+	} else if f.Status >= 500 || f.Status == 0 && !cancelled {
 		d.errors++
 		if d.errors >= 3 {
 			d.factor = math.Max(.1, d.factor*.7)
@@ -334,6 +348,7 @@ func (d *Dispatcher) release(ctx context.Context, q db.Queryer, worker, id strin
 	}
 	d.horizon = horizon
 	s.feedback = &f
+	s.cancelled = cancelled
 	return nil
 }
 func (d *Dispatcher) FinalizeRelease(worker, id string) {
@@ -343,6 +358,8 @@ func (d *Dispatcher) FinalizeRelease(worker, id string) {
 		if f := s.feedback; f != nil {
 			class := "network"
 			switch {
+			case s.cancelled:
+				class = "cancelled"
 			case f.Status == 429:
 				class = "429"
 			case f.Status >= 500:
