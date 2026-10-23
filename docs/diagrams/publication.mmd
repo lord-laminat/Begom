@@ -1,0 +1,14 @@
+flowchart LR
+  part["Agent-owned stage: video.part + metadata"] --> prep["SQL verifying: attempt / size / checksum / reserve"]
+  prep --> verify["Verify mount / authority / source SHA-256"]
+  verify --> copy["Copy to publisher-private inode"]
+  copy --> hash["SHA-256 + sanitized SQL metadata + fsync"]
+  hash --> rename["Atomic directory rename to published"]
+  rename --> commit["SQL transaction: catalog ready / item completed / checkpoint"]
+  commit --> serve["ACL check + X-Accel-Redirect"]
+  rename -. "crash before SQL commit" .-> recover["Reconciler: verify moved file and current attempt"]
+  recover --> commit
+  verify -->|"mismatch / stale attempt"| withdrawn["failed / orphan: unavailable to clients"]
+  commit --> scrub["Size / existence reconciliation; bounded SHA-256 scrub"]
+  scrub -->|"corrupt or missing"| withdrawn
+  withdrawn --> quarantine["Quarantine known publication directories"]

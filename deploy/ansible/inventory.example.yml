@@ -1,0 +1,39 @@
+all:
+  vars:
+    ansible_user: ubuntu
+    ansible_python_interpreter: /usr/bin/python3
+    begom_bundle: /absolute/path/to/private/linux-bundle
+    begom_binaries: /absolute/path/to/Begom/bin
+    begom_realm: BEGOM.INTERNAL
+    begom_domain: example.internal
+    begom_private_cidr: 10.20.0.0/24
+    begom_admin_cidr: 10.20.0.0/24
+    begom_public_name: begom.example.internal
+    begom_nas: nas.example.internal
+    begom_control: control.example.internal
+    begom_backup: backup.example.internal
+    # Dedicated filesystem mounted here; must already exist, not a root directory fallback.
+    begom_nas_device_mount: /srv/nas
+    begom_backup_mount: /srv/backup
+    begom_backup_repository: /srv/backup/restic
+  children:
+    control:
+      hosts:
+        coordinator:
+          ansible_host: control.example.internal
+          begom_fqdn: control.example.internal
+    nas:
+      hosts:
+        storage:
+          ansible_host: nas.example.internal
+          begom_fqdn: nas.example.internal
+    agents:
+      hosts:
+        worker-1: {ansible_host: agent1.example.internal, begom_fqdn: agent1.example.internal, begom_uid: 10001}
+        worker-2: {ansible_host: agent2.example.internal, begom_fqdn: agent2.example.internal, begom_uid: 10002}
+        worker-3: {ansible_host: agent3.example.internal, begom_fqdn: agent3.example.internal, begom_uid: 10003}
+    backup:
+      hosts:
+        backup-node:
+          ansible_host: backup.example.internal
+          begom_fqdn: backup.example.internal

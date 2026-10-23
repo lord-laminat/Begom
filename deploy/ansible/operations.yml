@@ -1,0 +1,23 @@
+- name: Failure driver on the explicitly selected test node
+  hosts: '{{ begom_target }}'
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Validate closed operation vocabulary
+      ansible.builtin.assert:
+        that: ["begom_operation in ['kill','start']", "begom_target == 'coordinator' or begom_target in groups['agents']"]
+    - name: Stop service immediately
+      ansible.builtin.command:
+        argv: [systemctl, kill, --signal=SIGKILL, '{{ "begom-coordinator" if begom_target == "coordinator" else "begom-agent" }}.service']
+      when: begom_operation == 'kill'
+      changed_when: true
+    - name: Hold service stopped for the failure measurement
+      ansible.builtin.systemd_service:
+        name: '{{ "begom-coordinator" if begom_target == "coordinator" else "begom-agent" }}'
+        state: stopped
+      when: begom_operation == 'kill'
+    - name: Start selected service
+      ansible.builtin.systemd_service:
+        name: '{{ "begom-coordinator" if begom_target == "coordinator" else "begom-agent" }}'
+        state: started
+      when: begom_operation == 'start'

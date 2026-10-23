@@ -1,0 +1,12 @@
+[kdcdefaults]
+ kdc_ports = 88
+ kdc_tcp_ports = 88
+[realms]
+ {{ begom_realm }} = {
+  database_name = /var/lib/krb5kdc/principal
+  key_stash_file = /etc/krb5kdc/stash
+  acl_file = /etc/krb5kdc/kadm5.acl
+  max_life = 10h
+  max_renewable_life = 1d
+  supported_enctypes = aes256-cts-hmac-sha1-96:normal aes128-cts-hmac-sha1-96:normal
+ }

@@ -1,0 +1,6 @@
+- ansible.builtin.set_fact:
+    principals: '{{ ["nfs/"+hostvars[node].begom_fqdn] + (["begom-"+node] if node in groups["agents"] else (["begom-publisher","begom-web"] if node in groups["control"] else (["begom-backup"] if node in groups["backup"] else []))) }}'
+- name: Create principals and private keytabs
+  ansible.builtin.include_tasks: keytab.yml
+  loop: '{{ principals }}'
+  loop_control: {loop_var: principal}

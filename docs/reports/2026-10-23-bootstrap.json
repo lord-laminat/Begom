@@ -1,0 +1,56 @@
+{
+  "verified_at_utc": "2026-10-23T11:13:06.193963+00:00",
+  "profile": "bootstrap-readiness-and-kinescope-runtime",
+  "versions": {
+    "go": "1.26.7",
+    "openbao": "2.7.1",
+    "docker": "29.8.0",
+    "compose": "5.4.0"
+  },
+  "go_check": "make check passed: fmt, vet, race tests, five binaries",
+  "fresh_openbao": {
+    "profile": "fresh-single-node-OpenBao-2.7.1",
+    "checks": [
+      {
+        "name": "first_initialization",
+        "status": "passed",
+        "seconds": 8.343
+      },
+      {
+        "name": "repeat_without_reinitialization",
+        "status": "passed",
+        "seconds": 0.022
+      }
+    ],
+    "status": "passed"
+  },
+  "runtime": {
+    "profile": "begom-kinescope",
+    "ready": true,
+    "login": true,
+    "source_profile": {
+      "mock": false,
+      "source_id": "kinescope"
+    },
+    "workers": [
+      {
+        "id": "worker-1",
+        "online": true
+      },
+      {
+        "id": "worker-2",
+        "online": true
+      },
+      {
+        "id": "worker-3",
+        "online": true
+      }
+    ]
+  },
+  "verification_created_jobs": false,
+  "source_sha256": {
+    "internal/bootstrap/bao.go": "32026313680e0007d21204e889d8dd0cd02ce5c97cca2112b18103cbdf161b4a",
+    "internal/bootstrap/bao_test.go": "ffcaeb39f907d3d01244ea19ee5d8f5cfe90d1a76a47adc621258e52e1cd4ecb",
+    "Dockerfile": "0aafef50a4596dac1f9cc777133c05164b381e98f69a2ccaff24a930d8328ab1"
+  }
+}

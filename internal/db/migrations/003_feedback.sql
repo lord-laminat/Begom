@@ -1,0 +1,1 @@
+CREATE TABLE donor_feedback(connection_id text PRIMARY KEY,source_id text NOT NULL REFERENCES donor_quota_state,worker_id text NOT NULL REFERENCES workers,body_hash text NOT NULL,received_at timestamptz NOT NULL DEFAULT now());

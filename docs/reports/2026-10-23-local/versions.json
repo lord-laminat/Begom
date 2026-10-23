@@ -1,0 +1,86 @@
+{
+  "recorded_at": "2026-10-23T09:08:48.316570+00:00",
+  "profile": "compose-mock-local",
+  "independent_hosts": 1,
+  "agents": 3,
+  "go": "go version go1.26.7 linux/amd64",
+  "docker": "29.8.0",
+  "compose": "5.4.0",
+  "kernel": "6.18.52",
+  "arch": "x86_64",
+  "os": "NixOS 26.05 (Yarara)",
+  "postgres": "postgres (PostgreSQL) 18.6 (Debian 18.6-1.pgdg12+2)",
+  "schema_version": 4,
+  "images": [
+    {
+      "service": "coordinator",
+      "reference": "begom-app:1.0.0",
+      "image_id": "sha256:6e04afe8fa08466c07b1921e2a2c832792a0d9363751e18fbbc6ca9241ce37cf"
+    },
+    {
+      "service": "fluent-bit",
+      "reference": "cr.fluentbit.io/fluent/fluent-bit:5.1.5@sha256:2740f387f6e68fab66d28e4fa6a853387b9cab6ffb4cb78958f69bba4eb0e7b4",
+      "image_id": "sha256:2740f387f6e68fab66d28e4fa6a853387b9cab6ffb4cb78958f69bba4eb0e7b4"
+    },
+    {
+      "service": "grafana",
+      "reference": "grafana/grafana:13.2.4@sha256:dbbc38ea21103cefb50396340cd88afec779c7e070b0a7bf5a75b4ce46651d3f",
+      "image_id": "sha256:dbbc38ea21103cefb50396340cd88afec779c7e070b0a7bf5a75b4ce46651d3f"
+    },
+    {
+      "service": "loki",
+      "reference": "grafana/loki:3.7.9@sha256:0db216b630ae1f348a1584c67f3cead8b4c1fc839169a39501db664744158e28",
+      "image_id": "sha256:0db216b630ae1f348a1584c67f3cead8b4c1fc839169a39501db664744158e28"
+    },
+    {
+      "service": "mockdonor",
+      "reference": "begom-app:1.0.0",
+      "image_id": "sha256:6e04afe8fa08466c07b1921e2a2c832792a0d9363751e18fbbc6ca9241ce37cf"
+    },
+    {
+      "service": "nginx",
+      "reference": "sha256:227abbe4867da1f1f54f7898a32d2e7e50f8feb1c30c663d2975b1c6024aebc0",
+      "image_id": "sha256:227abbe4867da1f1f54f7898a32d2e7e50f8feb1c30c663d2975b1c6024aebc0"
+    },
+    {
+      "service": "nginx-exporter",
+      "reference": "nginx/nginx-prometheus-exporter:1.5.3@sha256:85666e7fde7e253f1c6d978f9a961245df4c9cdb7677e1866d9bb28e8f9ee41d",
+      "image_id": "sha256:85666e7fde7e253f1c6d978f9a961245df4c9cdb7677e1866d9bb28e8f9ee41d"
+    },
+    {
+      "service": "openbao",
+      "reference": "quay.io/openbao/openbao:2.7.1@sha256:6d2b93856e3fcf7b18ad855a0b51eaba474dc8b79cf554379ea32034797d2acf",
+      "image_id": "sha256:6d2b93856e3fcf7b18ad855a0b51eaba474dc8b79cf554379ea32034797d2acf"
+    },
+    {
+      "service": "postgres",
+      "reference": "begom-postgres:18.6",
+      "image_id": "sha256:31dbe5778acc9611278759f23b2e1c1bf162b844fc5ffe40d7179afc219840ba"
+    },
+    {
+      "service": "postgres-exporter",
+      "reference": "quay.io/prometheuscommunity/postgres-exporter:v0.20.1@sha256:ac5ec343104fae0e2d84a27bb8d69b38430a11910c5382cad85d478d2bab713e",
+      "image_id": "sha256:ac5ec343104fae0e2d84a27bb8d69b38430a11910c5382cad85d478d2bab713e"
+    },
+    {
+      "service": "prometheus",
+      "reference": "prom/prometheus:v3.15.1@sha256:fa3302279710be2f21a8301ec17a8b4f2301fd829bd113839b3b6b02b6f191a2",
+      "image_id": "sha256:fa3302279710be2f21a8301ec17a8b4f2301fd829bd113839b3b6b02b6f191a2"
+    },
+    {
+      "service": "worker-1",
+      "reference": "begom-app:1.0.0",
+      "image_id": "sha256:6e04afe8fa08466c07b1921e2a2c832792a0d9363751e18fbbc6ca9241ce37cf"
+    },
+    {
+      "service": "worker-2",
+      "reference": "begom-app:1.0.0",
+      "image_id": "sha256:6e04afe8fa08466c07b1921e2a2c832792a0d9363751e18fbbc6ca9241ce37cf"
+    },
+    {
+      "service": "worker-3",
+      "reference": "begom-app:1.0.0",
+      "image_id": "sha256:6e04afe8fa08466c07b1921e2a2c832792a0d9363751e18fbbc6ca9241ce37cf"
+    }
+  ]
+}

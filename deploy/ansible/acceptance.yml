@@ -1,0 +1,76 @@
+- name: Prepare a non-catalogued permission probe as the publisher
+  hosts: control
+  become: true
+  tasks:
+    - ansible.builtin.command:
+        argv: [runuser, -u, begom-publisher, --, install, -m, '0640', /dev/null, /srv/begom/published/.begom-permission-probe]
+      changed_when: false
+
+- name: Verify actual NFS reads and writes using each unprivileged agent
+  hosts: agents
+  become: true
+  tasks:
+    - ansible.builtin.command: {argv: [findmnt, -n, -o, OPTIONS, /srv/begom]}
+      register: options
+      changed_when: false
+    - ansible.builtin.assert: {that: ["'sec=krb5p' in options.stdout"]}
+    - ansible.builtin.command:
+        argv: [runuser, -u, 'begom-{{ inventory_hostname }}', --, install, -m, '0640', /dev/null, '/srv/begom/staging/{{ inventory_hostname }}/.begom-permission-probe']
+      changed_when: false
+    - name: Agent cannot create a published file
+      ansible.builtin.command:
+        argv: [runuser, -u, 'begom-{{ inventory_hostname }}', --, touch, '/srv/begom/published/.begom-denied-{{ inventory_hostname }}']
+      register: denied
+      failed_when: denied.rc == 0
+      changed_when: false
+    - name: Agent cannot change the existing published probe
+      ansible.builtin.command:
+        argv: [runuser, -u, 'begom-{{ inventory_hostname }}', --, touch, /srv/begom/published/.begom-permission-probe]
+      register: denied
+      failed_when: denied.rc == 0
+      changed_when: false
+    - name: Agent cannot create a file in another staging area
+      ansible.builtin.command:
+        argv: [runuser, -u, 'begom-{{ inventory_hostname }}', --, touch, '/srv/begom/staging/{{ item }}/.begom-denied-{{ inventory_hostname }}']
+      loop: '{{ groups["agents"] | difference([inventory_hostname]) }}'
+      register: denied
+      failed_when: denied.rc == 0
+      changed_when: false
+    - name: Agent cannot read another staging area
+      ansible.builtin.command:
+        argv: [runuser, -u, 'begom-{{ inventory_hostname }}', --, cat, '/srv/begom/staging/{{ item }}/.begom-permission-probe']
+      loop: '{{ groups["agents"] | difference([inventory_hostname]) }}'
+      register: denied
+      failed_when: denied.rc == 0
+      changed_when: false
+    - ansible.builtin.command: {argv: [systemctl, is-active, begom-agent]}
+      changed_when: false
+
+- name: Verify web access and remove only the publisher's probe
+  hosts: control
+  become: true
+  tasks:
+    - block:
+        - ansible.builtin.command: {argv: [runuser, -u, www-data, --, cat, /srv/begom/published/.begom-permission-probe]}
+          changed_when: false
+        - ansible.builtin.command: {argv: [runuser, -u, www-data, --, touch, /srv/begom/published/.begom-permission-probe]}
+          register: denied
+          failed_when: denied.rc == 0
+          changed_when: false
+        - ansible.builtin.command:
+            argv: [runuser, -u, www-data, --, cat, '/srv/begom/staging/{{ item }}/.begom-permission-probe']
+          loop: '{{ groups["agents"] }}'
+          register: denied
+          failed_when: denied.rc == 0
+          changed_when: false
+      always:
+        - ansible.builtin.command: {argv: [runuser, -u, begom-publisher, --, rm, -f, /srv/begom/published/.begom-permission-probe]}
+          changed_when: false
+
+- name: Remove only each agent's own probe
+  hosts: agents
+  become: true
+  tasks:
+    - ansible.builtin.command:
+        argv: [runuser, -u, 'begom-{{ inventory_hostname }}', --, rm, -f, '/srv/begom/staging/{{ inventory_hostname }}/.begom-permission-probe']
+      changed_when: false

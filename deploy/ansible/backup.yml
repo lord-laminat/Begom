@@ -1,0 +1,64 @@
+- ansible.builtin.command: {argv: [mountpoint, -q, '{{ begom_backup_mount }}']}
+  changed_when: false
+- ansible.builtin.apt: {name: [docker.io, docker-compose-v2], state: present}
+- ansible.builtin.file: {path: /etc/begom-backup, state: directory, owner: begom-backup, mode: '0700'}
+- ansible.builtin.file: {path: '{{ begom_backup_repository }}', state: directory, owner: begom-backup, mode: '0700'}
+- ansible.builtin.copy:
+    src: '{{ begom_bundle }}/secrets/{{ item.src }}'
+    dest: '/etc/begom-backup/{{ item.dest }}'
+    owner: begom-backup
+    mode: '0400'
+  loop: [{src: backup-db-url, dest: database-url}, {src: restic-password, dest: restic-password}]
+  no_log: true
+- ansible.builtin.copy:
+    dest: /etc/begom-backup/config.json
+    owner: begom-backup
+    mode: '0400'
+    content: '{{ {"database_url_file":"/etc/begom-backup/database-url","repository":begom_backup_repository,"password_file":"/etc/begom-backup/restic-password","work_dir":"/tmp","storage":{"root":"/srv/begom","mount_path":"/srv/begom","mode":"nfs","volume_id":(lookup("ansible.builtin.file", begom_bundle+"/storage/.begom-volume")),"min_free_bytes":0}} | to_nice_json }}'
+- name: Use the pinned PostgreSQL 18 and restic container tools in a rootless service
+  ansible.builtin.copy:
+    dest: /etc/begom-backup/compose.yml
+    mode: '0644'
+    content: |
+      name: begom-backup
+      services:
+        backup:
+          image: begom-backup:1.0.0
+          user: '10020:10010'
+          network_mode: host
+          read_only: true
+          cap_drop: [ALL]
+          security_opt: [no-new-privileges:true]
+          tmpfs: ['/tmp:size=4g,mode=1777']
+          volumes: [/etc/begom-backup:/etc/begom-backup:ro, /etc/begom/ca.crt:/etc/begom/ca.crt:ro, /srv/begom:/srv/begom:ro, '{{ begom_backup_repository }}:{{ begom_backup_repository }}', /run/begom-ccaches:/run/begom-ccaches:ro]
+- ansible.builtin.copy: {src: '{{ begom_bundle }}/backup-image.tar', dest: /var/tmp/begom-backup-image.tar, mode: '0600'}
+- ansible.builtin.command: {argv: [docker, load, -i, /var/tmp/begom-backup-image.tar]}
+  changed_when: true
+- name: Initialize only an explicitly new independent backup repository
+  ansible.builtin.command:
+    argv: [docker, compose, -f, /etc/begom-backup/compose.yml, run, --rm, backup, backup, init, --config, /etc/begom-backup/config.json]
+    creates: '{{ begom_backup_repository }}/config'
+- ansible.builtin.copy:
+    dest: /etc/systemd/system/begom-backup.service
+    mode: '0644'
+    content: |
+      [Unit]
+      Description=Consistent encrypted SQL and published-files backup
+      RequiresMountsFor=/srv/begom {{ begom_backup_mount }}
+      After=begom-tickets.service
+      [Service]
+      Type=oneshot
+      ExecStartPre=/usr/bin/mountpoint -q {{ begom_backup_mount }}
+      ExecStart=/usr/bin/docker compose -f /etc/begom-backup/compose.yml run --rm backup backup run --config /etc/begom-backup/config.json
+      TimeoutStartSec=4h
+- ansible.builtin.copy:
+    dest: /etc/systemd/system/begom-backup.timer
+    mode: '0644'
+    content: |
+      [Timer]
+      OnCalendar=hourly
+      Persistent=true
+      RandomizedDelaySec=60
+      [Install]
+      WantedBy=timers.target
+- ansible.builtin.systemd_service: {name: begom-backup.timer, daemon_reload: true, enabled: true, state: started}

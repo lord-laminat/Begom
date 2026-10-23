@@ -1,0 +1,132 @@
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "__name__": "up",
+          "instance": "worker-1:9101",
+          "job": "agents",
+          "worker": "worker-1"
+        },
+        "value": [
+          1792745716.338,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "up",
+          "instance": "worker-2:9101",
+          "job": "agents",
+          "worker": "worker-2"
+        },
+        "value": [
+          1792745716.338,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "up",
+          "instance": "grafana:3000",
+          "job": "grafana"
+        },
+        "value": [
+          1792745716.338,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "up",
+          "instance": "coordinator:8444",
+          "job": "coordinator"
+        },
+        "value": [
+          1792745716.338,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "up",
+          "instance": "fluent-bit:2020",
+          "job": "fluent-bit"
+        },
+        "value": [
+          1792745716.338,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "up",
+          "instance": "prometheus:9090",
+          "job": "prometheus"
+        },
+        "value": [
+          1792745716.338,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "up",
+          "instance": "worker-3:9101",
+          "job": "agents",
+          "worker": "worker-3"
+        },
+        "value": [
+          1792745716.338,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "up",
+          "instance": "loki:3100",
+          "job": "loki"
+        },
+        "value": [
+          1792745716.338,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "up",
+          "instance": "openbao:8200",
+          "job": "openbao"
+        },
+        "value": [
+          1792745716.338,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "up",
+          "instance": "nginx-exporter:9113",
+          "job": "nginx"
+        },
+        "value": [
+          1792745716.338,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "up",
+          "instance": "postgres-exporter:9187",
+          "job": "postgres"
+        },
+        "value": [
+          1792745716.338,
+          "1"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,2 @@
+go test -race -tags integration ./tests/integration/... -count=1 -timeout=10m
+ok  	github.com/rychkin/Begom/tests/integration	13.361s

@@ -1,0 +1,8 @@
+[Unit]
+Description=Refresh NFS user credentials before expiry
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=1h
+Persistent=true
+[Install]
+WantedBy=timers.target

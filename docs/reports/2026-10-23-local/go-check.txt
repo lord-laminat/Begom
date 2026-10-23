@@ -1,0 +1,32 @@
+go vet ./...
+go test -race ./...
+?   	github.com/rychkin/Begom/cmd/agent	[no test files]
+?   	github.com/rychkin/Begom/cmd/begomctl	[no test files]
+?   	github.com/rychkin/Begom/cmd/coordinator	[no test files]
+?   	github.com/rychkin/Begom/cmd/mockdonor	[no test files]
+?   	github.com/rychkin/Begom/cmd/node-helper	[no test files]
+?   	github.com/rychkin/Begom/internal/acceptance	[no test files]
+ok  	github.com/rychkin/Begom/internal/agent	(cached)
+ok  	github.com/rychkin/Begom/internal/auth	(cached)
+?   	github.com/rychkin/Begom/internal/backup	[no test files]
+ok  	github.com/rychkin/Begom/internal/bootstrap	1.212s
+ok  	github.com/rychkin/Begom/internal/config	(cached)
+ok  	github.com/rychkin/Begom/internal/coordinator	(cached)
+?   	github.com/rychkin/Begom/internal/db	[no test files]
+ok  	github.com/rychkin/Begom/internal/dispatch	(cached)
+ok  	github.com/rychkin/Begom/internal/donor	(cached)
+?   	github.com/rychkin/Begom/internal/hostmetrics	[no test files]
+ok  	github.com/rychkin/Begom/internal/logging	(cached)
+?   	github.com/rychkin/Begom/internal/mockdonor	[no test files]
+ok  	github.com/rychkin/Begom/internal/model	(cached)
+ok  	github.com/rychkin/Begom/internal/nodecontrol	(cached)
+ok  	github.com/rychkin/Begom/internal/pki	(cached)
+?   	github.com/rychkin/Begom/internal/publication	[no test files]
+?   	github.com/rychkin/Begom/internal/runtimeutil	[no test files]
+?   	github.com/rychkin/Begom/internal/secrets	[no test files]
+ok  	github.com/rychkin/Begom/internal/sshcontrol	(cached)
+ok  	github.com/rychkin/Begom/internal/storage	(cached)
+ok  	github.com/rychkin/Begom/internal/target	(cached)
+?   	github.com/rychkin/Begom/internal/webui	[no test files]
+?   	github.com/rychkin/Begom/internal/wire	[no test files]
+ok  	github.com/rychkin/Begom/tools/openapi	1.127s

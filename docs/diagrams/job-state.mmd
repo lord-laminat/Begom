@@ -1,0 +1,17 @@
+stateDiagram-v2
+  [*] --> created
+  created --> validating: start
+  validating --> running: healthy resources
+  validating --> failed: validation failure
+  running --> pausing: pause
+  pausing --> paused: in-flight IDs finished; remainder released
+  running --> stopping: stop / deadline / no-workers / condition
+  pausing --> stopping: stop
+  paused --> stopping: stop
+  stopping --> stopped: current authority cancelled
+  paused --> running: resume; new run_id
+  stopped --> running: resume; new run_id
+  failed --> validating: resume; new run_id
+  running --> completed: effective range exhausted; no gaps
+  completed --> stopped: explicit retry of selected failures
+  completed --> [*]
