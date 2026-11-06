@@ -38,9 +38,12 @@ case "${1:-up}" in
   status) docker compose ps -a ;;
   logs) docker compose logs --tail 100 ;;
   acceptance)
-    if [ "$BEGOM_SOURCE" != mock ]; then echo 'Acceptance requires BEGOM_SOURCE=mock on the separate test profile' >&2; exit 1; fi
     make build
-    bin/begomctl acceptance --config "$BEGOM_STATE_DIR/client.json" --output artifacts/v2/acceptance
+    if [ "$BEGOM_SOURCE" = kinescope ]; then
+      python3 tests/kinescope/run.py --config "$BEGOM_STATE_DIR/client.json" --id "${BEGOM_ACCEPTANCE_ID:-203613411}" --output artifacts/v2/kinescope
+    else
+      bin/begomctl acceptance --config "$BEGOM_STATE_DIR/client.json" --output artifacts/v2/acceptance
+    fi
     ;;
   *) echo 'Usage: bash deploy/local-v2.sh [init|up|down|status|logs|acceptance]' >&2; exit 1 ;;
 esac

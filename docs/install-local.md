@@ -27,6 +27,7 @@ bash deploy/local-v2.sh status
 
 ```sh
 bash deploy/local-v2.sh logs
+make acceptance  # два этапа на официальном Kinescope
 bash deploy/local-v2.sh down
 bash deploy/local-v2.sh up
 ```

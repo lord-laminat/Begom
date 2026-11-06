@@ -36,7 +36,7 @@ docker stop begom-test-sql
 
 Отдельный ENOSPC-тест пропускается обычным Go-прогоном: он требует выделенной маленькой файловой системы и не заполняет обычный диск хоста.
 
-## Локальная измеряемая приёмка
+## Дополнительные нагрузочные и отказные программы
 
 Запустите новый mock-стенд по [инструкции](install-local.md), без других работающих заданий. Исходные настройки: 3 × 40 потоков, 120 соединений, 80 RPS, ответы страниц от четырёх секунд, H=2 с, L=10 с, sweep=1 с.
 
@@ -69,7 +69,7 @@ python3 tests/backup/run.py --state .local --output artifacts/backup
 
 Отказной драйвер задаёт собственный mock-сценарий с задержкой 12 секунд, без ошибок и унаследованных браузерных cases. Он требует 40 фактически одновременных запросов даже при минимальном адаптивном множителе квоты; SQL-состояние квоты не сбрасывается. Начальный множитель и измеренный пик записываются в протокол. Условие остановки без агентов для тестового задания — 180 секунд: оно должно пережить намеренный отказ OpenBao продолжительностью 65 секунд и последующее восстановление. Затем драйвер временно останавливает только SQL/OpenBao выбранного Compose-проекта, скрывает marker сгенерированного тома, проверяет прекращение новых запросов, возобновление работы и восстанавливает зависимости. Все остановленные службы и marker восстанавливаются в finally. Это не физический unmount NFS. ENOSPC достигается на tmpfs 4 МиБ в контейнере без внешней сети и capabilities. Восстановление копии использует новый каталог/БД и сохраняет их для проверки.
 
-В CI эти наборы выполняются на GitHub runner; протоколы загружаются даже при ошибке, секреты `.local*` не входят в artifacts. Сам факт наличия workflow не является результатом запуска GitHub Actions.
+Основной сквозной CI поднимает отдельный Kinescope-профиль: две операции, реальное видео в браузере, ENOSPC в изолированном tmpfs и backup/restore в новые БД и каталог. Нагрузочные и отказные программы управляемого донора сохранены для отдельного явного запуска и автоматически не выполняются. Протоколы загружаются даже при ошибке, секреты `.local*` не входят в artifacts. Сам факт наличия workflow не является результатом запуска GitHub Actions.
 
 ## Многосерверный стенд и дополнительные измерения
 
@@ -87,17 +87,21 @@ Linux-драйвер допустим только с явно заданным 
 
 ## Приёмка v2
 
-Рабочий профиль Kinescope запускается через `bash deploy/local-v2.sh up`; отдельный mock-профиль — по [инструкции](install-local.md). Приёмка требует остановки чужих активных заданий только внутри тестового профиля.
+Рабочий профиль и основной сквозной CI используют официальный Kinescope. Запуск: `make up`. Проверки уже запущенного профиля:
 
 ```sh
 make check
 BEGOM_TEST_DATABASE_URL=postgres://postgres@localhost:55435/postgres?sslmode=disable make integration
-bin/begomctl acceptance --config .local-v2-mock/client.json --output artifacts/v2/acceptance
-python3 tests/browser/run.py --config .local-v2-mock/client.json --output artifacts/v2/browser
-python3 tests/faults/run.py --config .local-v2-mock/client.json --output artifacts/v2/faults
-python3 tests/kinescope/run.py --config .local-v2-kinescope/client.json --output artifacts/v2/kinescope
+make acceptance
+python3 tests/kinescope/browser.py --config .local-v2-kinescope/client.json --output artifacts/v2/kinescope-browser
 ```
 
-Для локального mock-профиля экспортируйте указанные в инструкции project/state/ports/Compose-переменные до команд, запускающих Docker. Тест реального донора проверяет текущее публичное разрешение; числовой пример может стать недоступен, тогда нужен другой разрешённый материал. Ссылки скачивания и секреты в протокол не записываются.
+Нагрузочные программы выше сохранены для отдельного явного тестового профиля; после уточнения владельца они не запускались повторно. Тест настоящего донора проверяет текущее публичное разрешение; числовой пример может стать недоступен, тогда нужен другой разрешённый материал. Подписанные ссылки и секреты в протокол не записываются.
 
-На NixOS Playwright использует нативные Node.js/Chromium. Пример среды: `nix-shell -E 'with import <nixpkgs> {}; mkShell { packages=[nodejs chromium]; LD_LIBRARY_PATH=lib.makeLibraryPath [stdenv.cc.cc.lib]; }'`, затем `PLAYWRIGHT_NODEJS_PATH=$(command -v node) python tests/browser/run.py --executable $(command -v chromium) ...`. В Ubuntu CI используются установленные Playwright браузеры.
+На NixOS Playwright использует нативные Node.js/Chromium. Пример среды: `nix-shell -E 'with import <nixpkgs> {}; mkShell { packages=[nodejs chromium]; LD_LIBRARY_PATH=lib.makeLibraryPath [stdenv.cc.cc.lib]; }'`, затем `PLAYWRIGHT_NODEJS_PATH=$(command -v node) python tests/kinescope/browser.py --executable $(command -v chromium) ...`. В Ubuntu CI используются установленные Playwright браузеры.
+
+`make acceptance` по умолчанию проверяет официальный Kinescope на уже поднятом v2-профиле: два задания, актуальное разрешение, SHA-256 выдачи, Range и превью. Для другого разрешённого числового примера задайте `BEGOM_ACCEPTANCE_ID`. Браузерный `tests/kinescope/browser.py` использует те же закреплённые Playwright-зависимости из `tests/browser/requirements.txt`; на NixOS ему также можно передать `--executable`. Публичный материал может изменить разрешения, а внешний CDN — стать недоступным; такие случаи отражаются как фактическая ошибка, а не подменяются тестовым видео.
+
+`tests/backup/run.py --isolated-kinescope` разрешает согласованный snapshot и восстановление только в новую БД `begom_restore_*` и новый каталог на отдельном Kinescope-стенде. Использование этого флага должно быть явным; ни исходная БД, ни каталог опубликованных файлов не заменяются. На GitHub это одноразовая среда runner.
+
+Для проверки фактического воспроизведения сквозной CI использует `--channel chrome`. Выбор канала с медиакодеками соответствует [рекомендации Playwright](https://playwright.dev/python/docs/browsers#media-codecs). В локальном протоколе указан фактически использованный Chromium 153; Chrome-канал CI ещё должен выполниться после снятия billing-блокировки GitHub.

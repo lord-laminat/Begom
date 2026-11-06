@@ -65,12 +65,12 @@ func run(args []string) error {
 		}
 		return bootstrap.InitLinux(dir, p)
 	case "init", "permissions", "bao-init", "rotate-worker":
-		dir, endpoint, worker, source := ".local", "https://127.0.0.1:8200", "", "mock"
+		dir, endpoint, worker, source := ".local", "https://127.0.0.1:8200", "", "kinescope"
 		e := flags(args[0], args[1:], func(f *flag.FlagSet) {
 			f.StringVar(&dir, "dir", dir, "generated profile directory")
 			f.StringVar(&endpoint, "url", endpoint, "OpenBao URL")
 			f.StringVar(&worker, "worker", worker, "worker identity")
-			f.StringVar(&source, "source", source, "mock or kinescope (init only)")
+			f.StringVar(&source, "source", source, "kinescope or explicit mock test source (init only)")
 		})
 		if e != nil {
 			return e

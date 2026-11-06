@@ -1,4 +1,4 @@
-"""Snapshot and isolated restore on the disposable local mock stand.
+"""Snapshot and isolated restore on a disposable local stand.
 Only new begom_restore_* databases/directories are created; none are removed.
 The local repository is a development volume, not an independent backup host.
 """
@@ -13,17 +13,20 @@ from pathlib import Path
 parser = argparse.ArgumentParser()
 parser.add_argument('--state', default='.local')
 parser.add_argument('--output', default='artifacts/backup')
+parser.add_argument('--isolated-kinescope', action='store_true',
+                    help='Explicitly permit a snapshot and isolated restore on a disposable Kinescope stand')
 args = parser.parse_args()
 state = Path(args.state).resolve()
 output = Path(args.output).resolve()
 output.mkdir(parents=True, exist_ok=True)
 cfg = json.loads((state/'config/backup.json').read_text())
 source = json.loads((state/'config/coordinator.json').read_text())
-if source['source'].get('mock') is not True:
-    raise SystemExit('backup test requires the generated mock stand')
+mock = source['source'].get('mock') is True
+if not mock and (not args.isolated_kinescope or source['source'].get('source_id') != 'kinescope'):
+    raise SystemExit('A real source requires an explicit --isolated-kinescope test profile')
 if Path(os.environ.get('BEGOM_STATE_DIR', './.local')).resolve() != state:
     raise SystemExit('BEGOM_STATE_DIR must select the same generated state directory')
-report = {'profile': 'compose-mock-isolated-restore', 'started_at': datetime.now(timezone.utc).isoformat(), 'checks': []}
+report = {'profile': 'compose-'+('mock' if mock else 'kinescope')+'-isolated-restore', 'started_at': datetime.now(timezone.utc).isoformat(), 'checks': []}
 
 def compose(*args):
     r = subprocess.run(['docker', 'compose', *args], capture_output=True, text=True, timeout=600)
@@ -57,6 +60,11 @@ try:
     check('new_isolated_database_and_directory', restored['state'] == 'completed' and restored['database'].startswith('begom_restore_'))
     check('all_manifest_file_and_SQL_hashes_verified', restored['files'] == result['files'])
     check('measured_RPO_and_RTO', restored['rto_seconds'] > 0 and restored['rpo_seconds'] >= 0)
+    report['status'] = 'passed'
+except Exception as error:
+    report['status'] = 'failed'
+    report['error_type'] = type(error).__name__
+    raise
 finally:
     report['finished_at'] = datetime.now(timezone.utc).isoformat()
     (output/'report.json').write_text(json.dumps(report, ensure_ascii=False, indent=2))

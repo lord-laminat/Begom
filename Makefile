@@ -27,4 +27,4 @@ status:
 logs:
 	bash deploy/local-v2.sh logs
 acceptance:
-	BEGOM_SOURCE=mock bash deploy/local-v2.sh acceptance
+	bash deploy/local-v2.sh acceptance

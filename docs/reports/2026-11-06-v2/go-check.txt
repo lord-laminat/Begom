@@ -9,7 +9,7 @@ go test -race ./...
 ok  	github.com/rychkin/Begom/internal/agent	(cached)
 ok  	github.com/rychkin/Begom/internal/auth	(cached)
 ?   	github.com/rychkin/Begom/internal/backup	[no test files]
-ok  	github.com/rychkin/Begom/internal/bootstrap	(cached)
+ok  	github.com/rychkin/Begom/internal/bootstrap	4.113s
 ok  	github.com/rychkin/Begom/internal/config	(cached)
 ok  	github.com/rychkin/Begom/internal/coordinator	(cached)
 ok  	github.com/rychkin/Begom/internal/db	(cached)

@@ -1,0 +1,104 @@
+{
+  "profile": "real-kinescope-browser-v2",
+  "external_id": "203613411",
+  "started_at": "2026-11-06T09:12:52.476228+00:00",
+  "checks": [
+    {
+      "name": "official_kinescope",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "three_live_agents",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "browser_created_discovery",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "discovery_available_without_file",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "browser_created_download",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "separate_selected_download_completed",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "real_thumbnail_and_duration",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "gallery_search_job_filter_and_reload",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "mobile_gallery_width",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "real_video_playback_after_direct_reload",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "client_download_size_and_SHA256",
+      "status": "passed",
+      "observed": {
+        "bytes": 122148096,
+        "filename": "begom-6fc4848a2322c1c5fb4867f34953f1ed.mp4"
+      }
+    },
+    {
+      "name": "real_profile_unprivileged_SSH_PTY",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "real_profile_terminal_resize",
+      "status": "passed",
+      "observed": {
+        "rows": 39,
+        "cols": 120
+      }
+    },
+    {
+      "name": "real_profile_terminal_CtrlC",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "real_profile_no_sudo_or_agent_secrets",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "javascript_errors",
+      "status": "passed",
+      "observed": []
+    }
+  ],
+  "discovery_job_id": "daf1acd39fb23f49a6b4491aff5ef7e2",
+  "download_job_id": "9e18d8f4ed99615f56daeead1010c794",
+  "file": {
+    "file_id": "6fc4848a2322c1c5fb4867f34953f1ed",
+    "size_bytes": "122148096",
+    "checksum": "515a1a8a4ff30f9e435b6f0df3a24a990e647334e8d0ad286c4a3f7fee5e6db4",
+    "duration_ms": 258461
+  },
+  "browser": "153.0.8010.47",
+  "status": "passed",
+  "finished_at": "2026-11-06T09:13:12.779370+00:00"
+}

@@ -1,0 +1,10 @@
+{
+  "status": "passed",
+  "recorded_at": "2026-11-06T09:22:58.148678+00:00",
+  "checks": [
+    "default CLI initializer uses official Kinescope",
+    "mock disabled",
+    "global initial RPS is 1",
+    "three worker configurations generated"
+  ]
+}

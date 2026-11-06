@@ -49,7 +49,7 @@ func jsonFile(path string, v any) error {
 	return write(path, b, 0644)
 }
 func Init(dir string) error {
-	return InitSource(dir, "mock")
+	return InitSource(dir, "kinescope")
 }
 func InitSource(dir, donor string) error {
 	if donor != "mock" && donor != "kinescope" {

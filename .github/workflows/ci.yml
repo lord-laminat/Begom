@@ -36,12 +36,14 @@ jobs:
       - run: python3 tests/deploy/render.py
       - run: ansible-playbook --syntax-check -i deploy/ansible/inventory.example.yml deploy/ansible/site.yml
   stand:
+    # Avoid two downloads from the public donor for a feature push and its PR.
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
       GOCACHE: /tmp/begom-go-build
       GOMODCACHE: /tmp/begom-go-mod
-      COMPOSE_FILE: docker-compose.yml:deploy/compose.v2.yml
+      COMPOSE_FILE: docker-compose.yml:deploy/compose.kinescope.yml:deploy/compose.v2.yml
       BEGOM_PUBLIC_ORIGIN: https://localhost:8443
     steps:
       - uses: actions/checkout@v4.3.0
@@ -50,14 +52,13 @@ jobs:
         with: {go-version: 1.26.7, cache: false}
       - name: Record container runtime versions
         run: docker version && docker compose version
-      - run: make build && bin/begomctl init --dir .local
-      - run: docker compose --progress plain up -d --build
-      - run: bin/begomctl acceptance --config .local/client.json --output artifacts/acceptance-local
-      - run: python3 -m pip install -r tests/browser/requirements.txt && python3 -m playwright install --with-deps chromium
-      - run: python3 tests/browser/run.py --config .local/client.json --output artifacts/browser
-      - run: python3 tests/faults/run.py --config .local/client.json --output artifacts/faults
+      - run: make build && bin/begomctl init --dir .local --source kinescope
+      - run: docker compose --progress plain up -d --build --wait --wait-timeout 240
+      - run: python3 tests/kinescope/run.py --config .local/client.json --output artifacts/kinescope
+      - run: python3 -m pip install -r tests/browser/requirements.txt && python3 -m playwright install --with-deps chrome
+      - run: python3 tests/kinescope/browser.py --config .local/client.json --output artifacts/kinescope-browser --channel chrome
       - run: docker compose --profile verification build storage-faults && docker compose --profile verification run --rm --no-deps storage-faults | tee artifacts/enospc.log
-      - run: docker compose --profile backup build backup && python3 tests/backup/run.py --state .local --output artifacts/backup
+      - run: docker compose --profile backup build backup && python3 tests/backup/run.py --state .local --output artifacts/backup --isolated-kinescope
       - name: Preserve stand diagnostics on failure
         if: failure()
         run: |

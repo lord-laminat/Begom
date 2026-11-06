@@ -1,0 +1,44 @@
+{
+  "profile": "compose-kinescope-isolated-restore",
+  "started_at": "2026-11-06T09:17:25.287132+00:00",
+  "checks": [
+    {
+      "name": "consistent_SQL_and_published_snapshot",
+      "status": "passed"
+    },
+    {
+      "name": "new_isolated_database_and_directory",
+      "status": "passed"
+    },
+    {
+      "name": "all_manifest_file_and_SQL_hashes_verified",
+      "status": "passed"
+    },
+    {
+      "name": "measured_RPO_and_RTO",
+      "status": "passed"
+    }
+  ],
+  "backup": {
+    "backup_id": "c8ce298370da898d1a8fde03f197e5d4",
+    "started_at": "2026-11-06T09:17:29.02014794Z",
+    "finished_at": "2026-11-06T09:17:33.676727017Z",
+    "files": 1,
+    "state": "completed",
+    "snapshot": "9c21ba7330916cc76d0d92ce94fd7eac631cffa4dc6939c0b2f8a658d0570761"
+  },
+  "restore": {
+    "backup_id": "c8ce298370da898d1a8fde03f197e5d4",
+    "started_at": "2026-11-06T09:17:35.901291538Z",
+    "finished_at": "2026-11-06T09:17:41.880948248Z",
+    "files": 1,
+    "state": "completed",
+    "snapshot": "9c21ba7330916cc76d0d92ce94fd7eac631cffa4dc6939c0b2f8a658d0570761",
+    "database": "begom_restore_20261106_091733_9c6c9b",
+    "restore_root": "/restore-state/restores/20261106_091733_9c6c9b",
+    "rpo_seconds": 6.8811435979999995,
+    "rto_seconds": 5.97965671
+  },
+  "status": "passed",
+  "finished_at": "2026-11-06T09:17:42.101453+00:00"
+}
