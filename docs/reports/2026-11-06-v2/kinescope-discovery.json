@@ -1,0 +1,43 @@
+{
+  "config": {
+    "block_size": 10,
+    "http_timeout_ms": 20000,
+    "limits": {
+      "check_rps": 0,
+      "connections": 0,
+      "download_rps": 0,
+      "rps": 1,
+      "worker_connections": 0,
+      "worker_rps": 0
+    },
+    "max_file_bytes": 10737418240,
+    "min_free_bytes": 0,
+    "range_text": "[203613400,203613420]",
+    "retry_policy": {
+      "base_ms": 500,
+      "max_ms": 30000,
+      "max_retries": 4
+    },
+    "stop_conditions": {
+      "consecutive_missing": 0,
+      "no_workers_seconds": 30
+    },
+    "threads_by_worker": null,
+    "threads_default": 2,
+    "worker_ids": [
+      "worker-1",
+      "worker-2",
+      "worker-3"
+    ]
+  },
+  "config_version": 1,
+  "job_id": "17aa61c8b4f3868d53e5e0bf2feed6eb",
+  "kind": "discovery",
+  "range": {
+    "from": "203613400",
+    "to": "203613420"
+  },
+  "run_id": "81f66c9758411624b2ac1f2e34307972",
+  "selection_count": 0,
+  "state": "created"
+}

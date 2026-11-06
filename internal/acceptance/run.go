@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/rychkin/Begom/internal/config"
+	"github.com/rychkin/Begom/internal/db"
 	"github.com/rychkin/Begom/internal/mockdonor"
 	"github.com/rychkin/Begom/internal/model"
 	"github.com/rychkin/Begom/internal/wire"
@@ -148,7 +149,7 @@ func (a *runner) create(ctx context.Context, rangeText string, workers []string,
 	var reply struct {
 		ID string `json:"job_id"`
 	}
-	if e := a.c.Do(ctx, "POST", "/api/jobs", cfg, &reply, model.NewID()); e != nil {
+	if e := a.c.Do(ctx, "POST", "/api/jobs", model.CreateJob{Kind: model.Discovery, Config: cfg}, &reply, model.NewID()); e != nil {
 		return "", cfg, e
 	}
 	a.r.Jobs = append(a.r.Jobs, reply.ID)
@@ -272,6 +273,20 @@ func (a *runner) run(ctx context.Context) error {
 	if e = a.check("global_rate_window", "at most 80 arrivals per sliding second", maxWindow <= 80, maxWindow); e != nil {
 		return e
 	}
+	for _, record := range st.Records {
+		if record.Class == "download" {
+			return a.check("discovery_does_not_download", "zero video file requests during parsing", false, record.Class)
+		}
+	}
+	a.check("discovery_does_not_download", "zero video file requests during parsing", true, 0)
+	scanJob := load
+	load, _, e = a.downloadFrom(ctx, scanJob, workers, 80)
+	if e != nil {
+		return e
+	}
+	if e = a.done(ctx, load); e != nil {
+		return e
+	}
 	items, e := a.items(ctx, load)
 	if e != nil {
 		return e
@@ -316,6 +331,13 @@ func (a *runner) run(ctx context.Context) error {
 		return e
 	}
 	duplicate, _, e := a.create(ctx, "[0,19]", workers, 10)
+	if e != nil {
+		return e
+	}
+	if e = a.done(ctx, duplicate); e != nil {
+		return e
+	}
+	duplicate, _, e = a.downloadFrom(ctx, duplicate, workers, 10)
 	if e != nil {
 		return e
 	}
@@ -399,6 +421,13 @@ func (a *runner) run(ctx context.Context) error {
 		return e
 	}
 	restart, _, e := a.create(ctx, "[2000,2119]", workers, 40)
+	if e != nil {
+		return e
+	}
+	if e = a.done(ctx, restart); e != nil {
+		return e
+	}
+	restart, _, e = a.downloadFrom(ctx, restart, workers, 40)
 	if e != nil {
 		return e
 	}
@@ -519,4 +548,35 @@ func MaxWindow(records []mockdonor.Record, window time.Duration) int {
 		maxCount = max(maxCount, end-start+1)
 	}
 	return maxCount
+}
+
+func (a *runner) downloadFrom(ctx context.Context, scan string, workers []string, block uint64) (string, model.JobConfig, error) {
+	cfg := model.JobConfig{WorkerIDs: workers, Threads: 40, BlockSize: block, Retry: model.RetryPolicy{MaxRetries: 4}, Limits: model.Limits{RPS: 80, WorkerRPS: 40, CheckRPS: 80, DownloadRPS: 80, Connections: 120, WorkerConnections: 40}, HTTPTimeoutMS: 20000, MaxFileBytes: 32 << 20}
+	var ids []string
+	after := ""
+	for {
+		var page struct {
+			Items []db.CatalogItem `json:"items"`
+			Next  string           `json:"next_after"`
+		}
+		if e := a.c.Do(ctx, "GET", "/api/catalog?discovery_job_id="+scan+"&limit=200&after="+after, nil, &page, ""); e != nil {
+			return "", cfg, e
+		}
+		for _, i := range page.Items {
+			ids = append(ids, i.ID)
+		}
+		if page.Next == "" {
+			break
+		}
+		after = page.Next
+	}
+	in := model.CreateJob{Kind: model.Download, Config: cfg, MediaIDs: ids}
+	var reply struct {
+		ID string `json:"job_id"`
+	}
+	if e := a.c.Do(ctx, "POST", "/api/jobs", in, &reply, model.NewID()); e != nil {
+		return "", cfg, e
+	}
+	a.r.Jobs = append(a.r.Jobs, reply.ID)
+	return reply.ID, cfg, a.c.Do(ctx, "POST", "/api/jobs/"+reply.ID+"/start", struct{}{}, nil, model.NewID())
 }

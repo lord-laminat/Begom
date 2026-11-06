@@ -19,6 +19,7 @@ import (
 var fixture embed.FS
 
 type Case struct {
+	CanonicalID string `json:"canonical_id"`
 	Title       string `json:"title"`
 	Status      int    `json:"status"`
 	DelayMS     int    `json:"delay_ms"`
@@ -162,6 +163,9 @@ func (s *Server) page(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	item := map[string]any{"id": "mock-" + id, "title": "Тестовое видео " + id}
+	if c.CanonicalID != "" {
+		item["id"] = c.CanonicalID
+	}
 	if c.Title != "" {
 		item["title"] = c.Title
 	}

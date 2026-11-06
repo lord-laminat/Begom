@@ -23,7 +23,7 @@
       name: begom-backup
       services:
         backup:
-          image: begom-backup:1.0.0
+          image: begom-backup:2.0.0
           user: '10020:10010'
           network_mode: host
           read_only: true

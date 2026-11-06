@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestConcurrentTerminalOutputBound(t *testing.T) {
+func TestConcurrentManagementOutputBound(t *testing.T) {
 	var b limitedBuffer
 	var wg sync.WaitGroup
 	for range 20 {

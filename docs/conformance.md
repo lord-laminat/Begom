@@ -1,6 +1,6 @@
 # Матрица соответствия
 
-Основание: `docs/ТЗ.docx`, ЭП, ТП и согласованный план Go. Таблица связывает требования с исполняемой реализацией и проверками. «Локально» означает Compose на одном хосте; физический NFS/Kerberos и масштабирование на целевом оборудовании требуют отдельного протокола. Уточнения архитектуры записаны в [ADR-0001](adr/0001-go-system.md).
+Основание: `docs/ТЗ.docx`, ЭП, ТП и согласованный план Go. Таблица связывает требования с исполняемой реализацией и проверками. «Локально» означает Compose на одном хосте; физический NFS/Kerberos и масштабирование на целевом оборудовании требуют отдельного протокола. Уточнения архитектуры записаны в [ADR-0001](adr/0001-go-system.md) и [ADR-0002](adr/0002-discovery-shell-gallery.md).
 
 | Требование ТЗ | Реализация | Свидетельство / граница проверки |
 |---|---|---|
@@ -20,7 +20,7 @@
 | §11.1 панель | ACL snapshot/WSS, скорости/ETA/объём/ошибки | Chromium, скриншоты desktop/mobile, измерение свежести |
 | §11.2 серверы | метрики ОС, активные загрузки, SSH, инвентарь, пороги | три изолированных агента, browser SSH; ОС в Compose общая |
 | §11.3 управление заданиями | create/start/pause/resume/stop/config/retry/history/export/ACL | мягкая пауза, смена run_id, остановка; export 12001 записи |
-| §11.4 SSH | pinned host key, OpenBao, WSS ticket, closed helper, подпись пакета, аудит | browser terminal, whitelist, checksum/signature/permissions; реальный OpenSSH Linux проверяется отдельно |
+| §11.4 SSH | pinned host key, OpenBao, WSS ticket, SSH PTY без sudo и отдельный служебный helper, подпись пакета, аудит | настоящий OpenSSH в Compose, TTY/resize/top/nano, host key/тайм-ауты/отзыв, подпись пакета; Linux отдельно |
 | §12 наблюдаемость | JSON UTC, Prometheus, Fluent Bit, Loki, Grafana, alerts, PostgreSQL/NGINX exporters | локальные targets и browser collect-to-render; Linux node exporters в Ansible |
 | §13 отказы | SQL fence/drain, lease recovery, dependency cancellation, публикация, backup | агент/координатор/SQL/OpenBao/marker, ENOSPC tmpfs; физическая сеть/NAS отдельно |
 | §14 доступ и секреты | Argon2id, session/CSRF, роли/ACL, mTLS/revoke/rotate, SSRF, paths, NGINX internal | модульные/браузерные проверки; NFS krb5p negative playbook подготовлен |
@@ -32,7 +32,18 @@
 | §20 тесты | unit/race, SQL, browser, fault, mock, backup, CI | фактические команды и результаты в отчёте; большой флот/большие файлы/NFS требуют целевого стенда |
 | §21 приёмка | автоматические измерения локального профиля и отдельная программа Linux | [фактический протокол](implementation-status.md); полная физическая приёмка не заявлена |
 | §22 состав поставки | код, миграции, OpenAPI, Compose, Ansible/systemd, руководства, диаграммы, отчёты | README и ссылки ниже |
-| §23 демонстрация | управляемый mock, acceptance drivers, операционные команды | [testing.md](testing.md); инъекции только в отдельном тестовом профиле |
+| §23 демонстрация | Kinescope-профиль и отдельный управляемый тестовый донор, acceptance drivers, операционные команды | [testing.md](testing.md); инъекции только в отдельном тестовом профиле |
 | §24 дополнительные задания | исключены решением владельца | не входят в объём поставки |
 
 Материалы поставки: [архитектура](implementation-profile.md), [контракты](contracts.md), [локальная установка](install-local.md), [Linux](install-linux.md), [оператор](operator.md), [обновление](maintenance.md), [копирование/восстановление](backup-restore.md), [диаграммы](diagrams/README.md), [протокол](implementation-status.md).
+
+## Принятое уточнение v2 от 6 ноября 2026
+
+| Уточнение владельца | Реализация | Проверка |
+|---|---|---|
+| Две пользовательские операции | discovery → ACL-каталог → фиксированный download; API v2 и CLI | SQL `two_stage_test`, нагрузочная и браузерная программы |
+| Полноценный терминал без sudo | xterm.js, бинарный WSS, настоящий SSH PTY, rootless OpenSSH/UID10050 | браузер: TTY, resize, Ctrl+C, top/nano, запрет секретов; host key и тайм-ауты |
+| Галерея скачанных файлов | `/gallery`, `/watch/ID`, поиск/фильтры, превью, выдача через ACL/NGINX | браузер: глубокие ссылки, поиск, mobile, получение файла и Range |
+| Чистый стенд с настоящим донором | отдельный v2 Kinescope-профиль с тремя агентами | `tests/kinescope/run.py`, фактический протокол отдельно от тестового донора |
+
+Основание изменения прежнего объединённого задания и закрытого терминала — [ADR-0002](adr/0002-discovery-shell-gallery.md). Исторические протоколы v1 не подтверждают новые функции; результаты v2 фиксируются отдельно.

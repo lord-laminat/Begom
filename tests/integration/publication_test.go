@@ -23,7 +23,7 @@ func TestPublicationRecoveryAndInodeIsolation(t *testing.T) {
 	for _, step := range []string{"part", "renamed_part", "renamed_directory", "corrupt"} {
 		t.Run(step, func(t *testing.T) {
 			x := setup(t)
-			job := x.job(t, "[10,10]", 1)
+			job := x.downloadJob(t, "[10,10]", 1, func(model.Number) string { return "canonical-one" })
 			l := x.lease(t, "w1")
 			if l == nil {
 				t.Fatal("lease missing")
@@ -117,14 +117,14 @@ func TestPublicationRecoveryAndInodeIsolation(t *testing.T) {
 			if e != nil || j.NextID != nil {
 				t.Fatal("publication checkpoint", j.NextID, e)
 			}
-			again := x.job(t, "[11,11]", 1)
+			again := x.downloadJob(t, "[11,11]", 1, func(model.Number) string { return "canonical-one" })
 			_ = again
 			mutate(t, x.s, "w1", "complete", l.Ref(), func(tx pgx.Tx) (any, int, error) { return x.s.CompleteTx(t.Context(), tx, "w1", l.Ref(), false) })
 			next := x.lease(t, "w2")
 			if next == nil {
 				t.Fatal("next lease")
 			}
-			r.ExternalID = 11
+			r.ExternalID = next.From
 			r.DownloadID = model.NewID()
 			r.StageID = model.NewID()
 			p = model.Progress{LeaseRef: next.Ref(), OperationID: model.NewID(), Sequence: 1, Results: []model.ItemResult{r}}
@@ -135,6 +135,49 @@ func TestPublicationRecoveryAndInodeIsolation(t *testing.T) {
 				t.Fatal("canonical file not reused", status)
 			}
 			if step == "part" {
+				var fileID string
+				if e = x.s.Pool.QueryRow(t.Context(), "SELECT id FROM files WHERE ready").Scan(&fileID); e != nil {
+					t.Fatal(e)
+				}
+				thumb := filepath.ToSlash(filepath.Join(filepath.Dir(pub.Path), "thumbnail.jpg"))
+				if e = os.WriteFile(filepath.Join(dir, "published", thumb), []byte("preview fixture"), 0640); e != nil {
+					t.Fatal(e)
+				}
+				thumbSize, thumbHash, e := storage.Hash(root, "published/"+thumb)
+				if e != nil {
+					t.Fatal(e)
+				}
+				if _, e = x.s.Pool.Exec(t.Context(), "INSERT INTO file_previews(file_id,state,relative_path,size_bytes,checksum,attempts) VALUES($1,'ready',$2,$3,$4,1)", fileID, thumb, thumbSize, thumbHash); e != nil {
+					t.Fatal(e)
+				}
+				if e = svc.ReconcilePreviews(t.Context()); e != nil {
+					t.Fatal(e)
+				}
+				if e = os.WriteFile(filepath.Join(dir, "published", thumb), []byte("corrupt preview"), 0640); e != nil {
+					t.Fatal(e)
+				}
+				if e = svc.ReconcilePreviews(t.Context()); e != nil {
+					t.Fatal(e)
+				}
+				var previewState string
+				var attempts int
+				if e = x.s.Pool.QueryRow(t.Context(), "SELECT state,attempts FROM file_previews WHERE file_id=$1", fileID).Scan(&previewState, &attempts); e != nil || previewState != "pending" || attempts != 0 {
+					t.Fatal("corrupt preview not queued for recovery", previewState, attempts, e)
+				}
+				// Recover a coordinator crash after the claim. This fixture is not a
+				// decodable video: decoder failure must preserve the committed file.
+				if _, e = x.s.Pool.Exec(t.Context(), "UPDATE file_previews SET state='processing',attempts=1 WHERE file_id=$1", fileID); e != nil {
+					t.Fatal(e)
+				}
+				if processed, err := svc.Preview(t.Context()); err != nil || !processed {
+					t.Fatal("interrupted preview claim not recovered", processed, err)
+				}
+				if e = x.s.Pool.QueryRow(t.Context(), "SELECT state,attempts FROM file_previews WHERE file_id=$1", fileID).Scan(&previewState, &attempts); e != nil || previewState != "failed" || attempts != 2 {
+					t.Fatal("invalid video preview accepted", previewState, attempts, e)
+				}
+				if e = x.s.Pool.QueryRow(t.Context(), "SELECT count(*) FROM files WHERE ready").Scan(&files); e != nil || files != 1 {
+					t.Fatal("preview failure withdrew the original", files, e)
+				}
 				x.job(t, "[12,12]", 1)
 				denied := x.lease(t, "w3")
 				if denied == nil {
@@ -174,7 +217,7 @@ func TestPublicationRecoveryAndInodeIsolation(t *testing.T) {
 
 func TestProgressSequenceAndSharedDiskReservation(t *testing.T) {
 	x := setup(t)
-	x.job(t, "[10,11]", 1)
+	x.downloadJob(t, "[10,11]", 1, nil)
 	a, b := x.lease(t, "w1"), x.lease(t, "w2")
 	if a == nil || b == nil {
 		t.Fatal("missing leases")

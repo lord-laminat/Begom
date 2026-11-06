@@ -9,7 +9,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/g
     done
 
 FROM debian:bookworm-slim@sha256:7ff6ba31527b9e336162fa061746c366c4b2032f4d2cff2078bea43f78efe3f8 AS app
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates ffmpeg \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /config /data/staging/worker-1 /data/staging/worker-2 /data/staging/worker-3 /run/secrets /updates
 COPY --from=build /out/ /usr/local/bin/
@@ -34,3 +34,17 @@ FROM app AS storage-faults
 COPY --from=fault-test-build /out/agent.test /usr/local/bin/agent.test
 ENTRYPOINT ["/usr/local/bin/agent.test"]
 CMD ["-test.run=^TestDownloadENOSPC$", "-test.v"]
+
+FROM debian:bookworm-slim@sha256:7ff6ba31527b9e336162fa061746c366c4b2032f4d2cff2078bea43f78efe3f8 AS worker-deps
+RUN apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 update \
+    && apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 install -y --no-install-recommends ca-certificates openssh-server bash procps nano util-linux \
+    && rm -rf /var/lib/apt/lists/* /etc/ssh/ssh_host_* \
+    && groupadd -g 10050 begom-shell \
+    && useradd -u 10050 -g 10050 -m -s /bin/bash -p '*' begom-shell \
+    && mkdir -p /run/sshd /etc/begom /config /data/staging/worker-1 /data/staging/worker-2 /data/staging/worker-3 /run/secrets /updates
+
+FROM worker-deps AS worker
+COPY --from=build /out/ /usr/local/bin/
+COPY deploy/ssh/terminal-sshd.conf /etc/begom/terminal-sshd.conf
+COPY deploy/ssh/start-worker.sh /usr/local/bin/start-worker
+ENTRYPOINT ["/bin/bash", "/usr/local/bin/start-worker"]

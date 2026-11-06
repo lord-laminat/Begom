@@ -32,7 +32,7 @@ groups:
         labels: {severity: warning}
         annotations: {summary: 'Задание не продвигается: {{ $labels.job }}'}
       - alert: AgentVersionMismatch
-        expr: begom_worker_version{version!="1.0.0"} > 0
+        expr: begom_worker_version{version!="2.0.0"} > 0
         for: 10s
         labels: {severity: critical}
         annotations: {summary: 'Несовместимая версия агента: {{ $labels.worker }}'}

@@ -21,7 +21,8 @@ import (
 
 func TestSimultaneousCanonicalDownloadsLeaveOnePublishedCopy(t *testing.T) {
 	x := setup(t)
-	x.job(t, "[0,1]", 1)
+	x.downloadJob(t, "[0,0]", 1, func(model.Number) string { return "same-canonical" })
+	x.downloadJob(t, "[0,0]", 1, func(model.Number) string { return "same-canonical" })
 	dir := t.TempDir()
 	os.WriteFile(filepath.Join(dir, ".begom-volume"), []byte("dedup-volume"), 0444)
 	root, e := os.OpenRoot(dir)

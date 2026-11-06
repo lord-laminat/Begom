@@ -3,7 +3,6 @@ package pki
 import (
 	"crypto/ed25519"
 	"crypto/rand"
-	"crypto/x509"
 	"encoding/pem"
 	"golang.org/x/crypto/ssh"
 )
@@ -13,7 +12,7 @@ func SSH() ([]byte, []byte, error) {
 	if e != nil {
 		return nil, nil, e
 	}
-	der, e := x509.MarshalPKCS8PrivateKey(key)
+	block, e := ssh.MarshalPrivateKey(key, "Begom")
 	if e != nil {
 		return nil, nil, e
 	}
@@ -21,5 +20,23 @@ func SSH() ([]byte, []byte, error) {
 	if e != nil {
 		return nil, nil, e
 	}
-	return pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der}), ssh.MarshalAuthorizedKey(public), nil
+	return pem.EncodeToMemory(block), ssh.MarshalAuthorizedKey(public), nil
+}
+
+// OpenSSHPrivate preserves the key identity while converting legacy PKCS#8
+// encoding, which OpenSSH does not accept for Ed25519 host keys.
+func OpenSSHPrivate(data []byte) ([]byte, error) {
+	block, _ := pem.Decode(data)
+	if block != nil && block.Type == "OPENSSH PRIVATE KEY" {
+		return data, nil
+	}
+	key, e := ssh.ParseRawPrivateKey(data)
+	if e != nil {
+		return nil, e
+	}
+	block, e = ssh.MarshalPrivateKey(key, "Begom")
+	if e != nil {
+		return nil, e
+	}
+	return pem.EncodeToMemory(block), nil
 }

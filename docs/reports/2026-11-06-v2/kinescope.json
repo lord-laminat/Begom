@@ -1,0 +1,45 @@
+{
+  "profile": "real-kinescope-v2",
+  "started_at": "2026-11-06T08:45:37.823462+00:00",
+  "external_id": "203613411",
+  "checks": [
+    {
+      "name": "real_donor",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "three_agents",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "discovery_available_without_file",
+      "status": "passed",
+      "observed": [
+        {
+          "status": "available",
+          "error_code": ""
+        }
+      ]
+    },
+    {
+      "name": "catalog_has_one_permitted_material",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "download_completed",
+      "status": "failed",
+      "observed": {
+        "status": "failed",
+        "error_code": "donor_connection_closed"
+      }
+    }
+  ],
+  "discovery_job_id": "47a06cd8c1cf8b68df4b6fbf6a8471eb",
+  "download_job_id": "87f14d3bd4948ccf9ae8951aeabcc01f",
+  "status": "failed",
+  "error_type": "AssertionError",
+  "finished_at": "2026-11-06T08:46:02.857784+00:00"
+}

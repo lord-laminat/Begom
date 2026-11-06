@@ -1,4 +1,4 @@
-- ansible.builtin.apt: {name: [nginx, prometheus-nginx-exporter, prometheus-postgres-exporter], state: present}
+- ansible.builtin.apt: {name: [ffmpeg, nginx, prometheus-nginx-exporter, prometheus-postgres-exporter], state: present}
 - ansible.builtin.copy:
     src: '{{ begom_bundle }}/secrets/{{ item }}'
     dest: '/etc/begom/{{ item }}'

@@ -269,3 +269,70 @@ func TestMaximumIdentifierAndCancelledGap(t *testing.T) {
 		t.Fatal("overflow at domain end", j, e)
 	}
 }
+
+// downloadJob seeds confirmed, accessible discovery results and creates a real
+// immutable download selection. Network parsing is covered by the stand tests.
+func (x *stand) downloadJob(t *testing.T, text string, block uint64, canonical func(model.Number) string) string {
+	t.Helper()
+	r, e := model.ParseRange(text)
+	if e != nil || r.To == nil {
+		t.Fatal("finite fixture range required", e)
+	}
+	scan := x.job(t, text, 10000)
+	chunk := model.NewID()
+	if _, e = x.s.Pool.Exec(t.Context(), "INSERT INTO range_chunks(id,job_id,range_start,range_end,status) VALUES($1,$2,$3,$4,'completed')", chunk, scan, r.From.String(), r.To.String()); e != nil {
+		t.Fatal(e)
+	}
+	ids := []string{}
+	for n := r.From; ; n++ {
+		name := "video-" + n.String()
+		if canonical != nil {
+			name = canonical(n)
+		}
+		meta := model.Metadata{CanonicalID: name, Title: "Video " + n.String(), MIME: "video/mp4", Size: 30, Qualities: []model.Quality{{Name: "720p", Size: 30}}}
+		var mid string
+		if e = x.s.Pool.QueryRow(t.Context(), "INSERT INTO media_metadata(id,source_id,external_id,canonical_id,title,page_url,data,downloadable) VALUES($1,'mock',$2,$3,$4,'https://example.com',$5,true) ON CONFLICT(source_id,canonical_id) DO UPDATE SET downloadable=true RETURNING id", model.NewID(), n.String(), name, meta.Title, db.JSON(meta)).Scan(&mid); e != nil {
+			t.Fatal(e)
+		}
+		if _, e = x.s.Pool.Exec(t.Context(), "INSERT INTO items(job_id,external_id,run_id,chunk_id,attempt_id,status,final,media_id) VALUES($1,$2,'fixture',$3,'fixture','available',true,$4)", scan, n.String(), chunk, mid); e != nil {
+			t.Fatal(e)
+		}
+		if _, e = x.s.Pool.Exec(t.Context(), "INSERT INTO media_aliases(source_id,external_id,media_id) VALUES('mock',$1,$2) ON CONFLICT(source_id,external_id) DO UPDATE SET media_id=EXCLUDED.media_id", n.String(), mid); e != nil {
+			t.Fatal(e)
+		}
+		ids = append(ids, mid)
+		if n == *r.To {
+			break
+		}
+	}
+	if _, e = x.s.Pool.Exec(t.Context(), "UPDATE jobs SET state='completed',frontier=NULL WHERE id=$1", scan); e != nil {
+		t.Fatal(e)
+	}
+	// Seeding large catalogs can exceed the deliberately short liveness window.
+	// Submit real fixture heartbeats before validating the download job.
+	for _, worker := range x.workers {
+		h := model.Heartbeat{SessionID: x.sessions[worker], Version: model.Version, Metrics: model.Metrics{MeasuredAt: time.Now().UTC(), DiskFree: 1 << 40, DiskTotal: 2 << 40, StorageHealthy: true}}
+		mutate(t, x.s, worker, "fixture.heartbeat", h, func(tx pgx.Tx) (any, int, error) { return x.s.HeartbeatTx(t.Context(), tx, worker, h) })
+	}
+	// A canonical material is selected once even when several numeric aliases exist.
+	seen := map[string]bool{}
+	unique := []string{}
+	for _, id := range ids {
+		if !seen[id] {
+			seen[id] = true
+			unique = append(unique, id)
+		}
+	}
+	in := model.CreateJob{Kind: model.Download, Config: model.JobConfig{WorkerIDs: x.workers, Threads: 40, BlockSize: block}, MediaIDs: unique}
+	result := mutate(t, x.s, x.user, "download.create", in, func(tx pgx.Tx) (any, int, error) {
+		return x.s.CreateRequestedJob(t.Context(), tx, x.user, "fixture", in)
+	})
+	var out struct {
+		ID string `json:"job_id"`
+	}
+	if e = json.Unmarshal(result.Body, &out); e != nil {
+		t.Fatal(e)
+	}
+	mutate(t, x.s, x.user, "start", out.ID, func(tx pgx.Tx) (any, int, error) { return x.s.Act(t.Context(), tx, x.user, "fixture", out.ID, "start") })
+	return out.ID
+}

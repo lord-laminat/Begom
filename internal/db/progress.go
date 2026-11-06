@@ -20,9 +20,10 @@ func (s *Store) ProgressTx(ctx context.Context, tx pgx.Tx, worker string, p mode
 	if len(p.Results) == 0 || len(p.Results) > 500 || !model.ValidID(p.OperationID) {
 		return nil, 0, Bad("invalid_progress", "Invalid result batch")
 	}
+	var kind string
 	var cfgJSON []byte
 	var cfg model.JobConfig
-	if e = tx.QueryRow(ctx, "SELECT config FROM jobs WHERE id=$1", p.JobID).Scan(&cfgJSON); e != nil {
+	if e = tx.QueryRow(ctx, "SELECT config,kind FROM jobs WHERE id=$1", p.JobID).Scan(&cfgJSON, &kind); e != nil {
 		return nil, 0, e
 	}
 	if e = json.Unmarshal(cfgJSON, &cfg); e != nil {
@@ -30,6 +31,25 @@ func (s *Store) ProgressTx(ctx context.Context, tx pgx.Tx, worker string, p mode
 	}
 	accepted := []map[string]any{}
 	for _, r := range p.Results {
+		var targetMedia, targetCanonical string
+		if kind == model.Download {
+			if e = tx.QueryRow(ctx, "SELECT media_id,canonical_id FROM job_targets WHERE job_id=$1 AND external_id=$2", p.JobID, r.ExternalID.String()).Scan(&targetMedia, &targetCanonical); errors.Is(e, pgx.ErrNoRows) {
+				return nil, 0, Bad("outside_selection", "Result was not selected")
+			} else if e != nil {
+				return nil, 0, e
+			}
+			if r.Status == "available" {
+				return nil, 0, Bad("invalid_status", "Only discovery confirms availability")
+			}
+			if r.Metadata != nil && r.Metadata.CanonicalID != targetCanonical {
+				return nil, 0, Conflict("canonical_changed")
+			}
+		} else if r.DownloadID != "" || r.ReserveBytes != 0 || r.Offset != 0 || r.Status == "download_queued" || r.Status == "downloading" {
+			return nil, 0, Bad("discovery_cannot_download", "Discovery cannot create downloads")
+		}
+		if r.Status == "available" && (r.Metadata == nil || len(r.Metadata.Qualities) == 0 || r.Metadata.DownloadURL == "") {
+			return nil, 0, Bad("invalid_availability", "Availability requires a permitted video asset")
+		}
 		if r.ReserveBytes > 2*cfg.MaxFileBytes || r.Offset > cfg.MaxFileBytes {
 			return nil, 0, Bad("file_size_limit", "Download exceeds the configured bound")
 		}
@@ -43,7 +63,7 @@ func (s *Store) ProgressTx(ctx context.Context, tx pgx.Tx, worker string, p mode
 			return nil, 0, Bad("invalid_status", "Completion is confirmed only by publication")
 		}
 		switch r.Status {
-		case "pending", "checking", "not_found", "found", "download_queued", "downloading", "skipped", "forbidden", "rate_limited", "retry_wait", "failed":
+		case "pending", "checking", "not_found", "found", "available", "download_queued", "downloading", "skipped", "forbidden", "rate_limited", "retry_wait", "failed":
 		default:
 			return nil, 0, Bad("invalid_status", "Unknown processing status")
 		}
@@ -72,8 +92,11 @@ func (s *Store) ProgressTx(ctx context.Context, tx pgx.Tx, worker string, p mode
 			safe.DownloadURL = ""
 			safe.PageURL = SafeURL(metadata.PageURL)
 			var mid string
-			e = tx.QueryRow(ctx, "INSERT INTO media_metadata(id,source_id,external_id,canonical_id,title,page_url,data,protected_url) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(source_id,canonical_id) DO UPDATE SET protected_url=COALESCE(EXCLUDED.protected_url,media_metadata.protected_url) RETURNING id", model.NewID(), s.SourceID, r.ExternalID.String(), metadata.CanonicalID, metadata.Title, SafeURL(metadata.PageURL), JSON(safe), protected).Scan(&mid)
+			e = tx.QueryRow(ctx, "INSERT INTO media_metadata(id,source_id,external_id,canonical_id,title,page_url,data,protected_url,downloadable) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(source_id,canonical_id) DO UPDATE SET protected_url=COALESCE(EXCLUDED.protected_url,media_metadata.protected_url),title=EXCLUDED.title,page_url=EXCLUDED.page_url,data=EXCLUDED.data,downloadable=EXCLUDED.downloadable,checked_at=clock_timestamp() RETURNING id", model.NewID(), s.SourceID, r.ExternalID.String(), metadata.CanonicalID, metadata.Title, SafeURL(metadata.PageURL), JSON(safe), protected, r.Status == "available" || r.Status == "download_queued" || r.Status == "downloading").Scan(&mid)
 			if e != nil {
+				return nil, 0, e
+			}
+			if _, e = tx.Exec(ctx, "INSERT INTO media_aliases(source_id,external_id,media_id) VALUES($1,$2,$3) ON CONFLICT(source_id,external_id) DO UPDATE SET media_id=EXCLUDED.media_id,checked_at=clock_timestamp()", s.SourceID, r.ExternalID.String(), mid); e != nil {
 				return nil, 0, e
 			}
 			media = mid
@@ -87,7 +110,20 @@ func (s *Store) ProgressTx(ctx context.Context, tx pgx.Tx, worker string, p mode
 				media = *mid
 			}
 		}
-		if media != nil && (r.Status == "found" || r.Status == "download_queued" || r.Status == "downloading") {
+		if kind == model.Discovery && metadata == nil && (r.Status == "not_found" || r.Status == "forbidden") {
+			if _, e = tx.Exec(ctx, "UPDATE media_metadata SET downloadable=false,checked_at=clock_timestamp() WHERE id IN(SELECT media_id FROM media_aliases WHERE source_id=$1 AND external_id=$2)", s.SourceID, r.ExternalID.String()); e != nil {
+				return nil, 0, e
+			}
+		}
+		if kind == model.Download && media == nil {
+			media = targetMedia
+		}
+		if kind == model.Download && (r.Status == "forbidden" || r.Status == "not_found" || r.ErrorCode == "download_not_allowed" || r.ErrorCode == "download_forbidden" || r.ErrorCode == "no_permitted_video_asset" || r.ErrorCode == "canonical_changed") {
+			if _, e = tx.Exec(ctx, "UPDATE media_metadata SET downloadable=false,checked_at=clock_timestamp() WHERE id=$1", targetMedia); e != nil {
+				return nil, 0, e
+			}
+		}
+		if kind == model.Download && media != nil && (r.Status == "found" || r.Status == "download_queued" || r.Status == "downloading") {
 			var ready bool
 			if e = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM files WHERE media_id=$1 AND ready)", media).Scan(&ready); e != nil {
 				return nil, 0, e
@@ -162,7 +198,7 @@ func (s *Store) ProgressTx(ctx context.Context, tx pgx.Tx, worker string, p mode
 }
 func SafeURL(raw string) string {
 	u, e := url.Parse(raw)
-	if e != nil {
+	if e != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Hostname() == "" || u.Opaque != "" {
 		return ""
 	}
 	u.RawQuery = ""

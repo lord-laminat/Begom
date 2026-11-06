@@ -84,6 +84,49 @@
         ],
         "type": "object"
       },
+      "CatalogItem": {
+        "additionalProperties": false,
+        "properties": {
+          "checked_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "external_id": {
+            "description": "Unsigned decimal 0..18446744073709551615, without floating point conversion",
+            "example": "18446744073709551615",
+            "pattern": "^[0-9]{1,20}$",
+            "type": "string"
+          },
+          "media_id": {
+            "type": "string"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/Metadata"
+          }
+        },
+        "required": [
+          "media_id",
+          "external_id",
+          "metadata",
+          "checked_at"
+        ],
+        "type": "object"
+      },
+      "CatalogPage": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogItem"
+            },
+            "type": "array"
+          },
+          "next_after": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "ChunkReply": {
         "additionalProperties": false,
         "properties": {
@@ -149,6 +192,32 @@
             "type": "integer"
           }
         },
+        "type": "object"
+      },
+      "CreateJob": {
+        "additionalProperties": false,
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/JobConfig"
+          },
+          "kind": {
+            "enum": [
+              "discovery",
+              "download"
+            ],
+            "type": "string"
+          },
+          "media_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "kind",
+          "config"
+        ],
         "type": "object"
       },
       "Empty": {
@@ -234,6 +303,84 @@
           "duration_ms",
           "bytes"
         ],
+        "type": "object"
+      },
+      "FileRecord": {
+        "additionalProperties": false,
+        "properties": {
+          "checksum": {
+            "type": "string"
+          },
+          "downloaded_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "external_id": {
+            "description": "Unsigned decimal 0..18446744073709551615, without floating point conversion",
+            "example": "18446744073709551615",
+            "pattern": "^[0-9]{1,20}$",
+            "type": "string"
+          },
+          "file_id": {
+            "type": "string"
+          },
+          "media_id": {
+            "type": "string"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/Metadata"
+          },
+          "mime_type": {
+            "type": "string"
+          },
+          "preview_state": {
+            "type": "string"
+          },
+          "size_bytes": {
+            "description": "Unsigned decimal 0..18446744073709551615, without floating point conversion",
+            "example": "18446744073709551615",
+            "pattern": "^[0-9]{1,20}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file_id",
+          "media_id",
+          "external_id",
+          "metadata",
+          "size_bytes",
+          "checksum",
+          "mime_type",
+          "downloaded_at",
+          "preview_state",
+          "duration_ms"
+        ],
+        "type": "object"
+      },
+      "FilesPage": {
+        "additionalProperties": false,
+        "properties": {
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/FileRecord"
+            },
+            "type": "array"
+          },
+          "next_after": {
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "Heartbeat": {
@@ -416,6 +563,9 @@
           "job_id": {
             "type": "string"
           },
+          "kind": {
+            "type": "string"
+          },
           "next_id": {
             "anyOf": [
               {
@@ -441,6 +591,10 @@
           "run_id": {
             "type": "string"
           },
+          "selection_count": {
+            "minimum": 0,
+            "type": "integer"
+          },
           "state": {
             "type": "string"
           },
@@ -450,6 +604,8 @@
           }
         },
         "required": [
+          "kind",
+          "selection_count",
           "job_id",
           "run_id",
           "state",
@@ -587,11 +743,17 @@
           "job_id": {
             "type": "string"
           },
+          "kind": {
+            "type": "string"
+          },
           "range": {
             "$ref": "#/components/schemas/Range"
           },
           "run_id": {
             "type": "string"
+          },
+          "selection_count": {
+            "type": "integer"
           },
           "state": {
             "type": "string"
@@ -646,6 +808,9 @@
           "job_id": {
             "type": "string"
           },
+          "kind": {
+            "type": "string"
+          },
           "lease_expires_at": {
             "format": "date-time",
             "type": "string"
@@ -681,9 +846,16 @@
           "server_time": {
             "format": "date-time",
             "type": "string"
+          },
+          "targets": {
+            "items": {
+              "$ref": "#/components/schemas/Target"
+            },
+            "type": "array"
           }
         },
         "required": [
+          "kind",
           "job_id",
           "run_id",
           "chunk_id",
@@ -804,6 +976,12 @@
           },
           "page_url": {
             "type": "string"
+          },
+          "qualities": {
+            "items": {
+              "$ref": "#/components/schemas/Quality"
+            },
+            "type": "array"
           },
           "quality": {
             "type": "string"
@@ -1197,6 +1375,25 @@
         ],
         "type": "object"
       },
+      "Quality": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "size_bytes": {
+            "description": "Unsigned decimal 0..18446744073709551615, without floating point conversion",
+            "example": "18446744073709551615",
+            "pattern": "^[0-9]{1,20}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "size_bytes"
+        ],
+        "type": "object"
+      },
       "Range": {
         "additionalProperties": false,
         "properties": {
@@ -1467,6 +1664,53 @@
         ],
         "type": "object"
       },
+      "Target": {
+        "additionalProperties": false,
+        "properties": {
+          "canonical_id": {
+            "type": "string"
+          },
+          "external_id": {
+            "description": "Unsigned decimal 0..18446744073709551615, without floating point conversion",
+            "example": "18446744073709551615",
+            "pattern": "^[0-9]{1,20}$",
+            "type": "string"
+          },
+          "media_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "media_id",
+          "external_id",
+          "canonical_id"
+        ],
+        "type": "object"
+      },
+      "TerminalSSH": {
+        "additionalProperties": false,
+        "properties": {
+          "host_key": {
+            "type": "string"
+          },
+          "port": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "secret_ref": {
+            "type": "string"
+          },
+          "user": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "port",
+          "user",
+          "host_key"
+        ],
+        "type": "object"
+      },
       "User": {
         "additionalProperties": false,
         "properties": {
@@ -1608,6 +1852,9 @@
           "storage_path": {
             "type": "string"
           },
+          "terminal_ssh": {
+            "$ref": "#/components/schemas/TerminalSSH"
+          },
           "threads": {
             "minimum": 0,
             "type": "integer"
@@ -1676,6 +1923,9 @@
           "storage_path": {
             "type": "string"
           },
+          "terminal_ssh": {
+            "$ref": "#/components/schemas/TerminalSSH"
+          },
           "threads": {
             "minimum": 0,
             "type": "integer"
@@ -1722,7 +1972,7 @@
   "info": {
     "description": "Version 1. Numeric identifiers are decimal strings. See docs/contracts.md for lifecycle, pagination, WSS frames and safety invariants.",
     "title": "Begom API",
-    "version": "1.0.0"
+    "version": "2.0.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -1731,12 +1981,12 @@
         "operationId": "get_api_audit",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -1868,12 +2118,12 @@
         "operationId": "post_api_auth_login",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -2011,12 +2261,12 @@
         "operationId": "post_api_auth_logout",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -2166,12 +2416,12 @@
         "operationId": "get_api_auth_session",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -2298,17 +2548,203 @@
         "x-required-access": "session"
       }
     },
+    "/api/catalog": {
+      "get": {
+        "operationId": "get_api_catalog",
+        "parameters": [
+          {
+            "description": "Omitted means v2; unsupported version returns 426",
+            "in": "header",
+            "name": "API-Version",
+            "schema": {
+              "enum": [
+                "2"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "discovery_job_id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "job_id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "quality",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogPage"
+                }
+              }
+            },
+            "description": "Downloadable discovery catalog; q, discovery_job_id, after and limit; deduplicated and ACL filtered"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "426": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Downloadable discovery catalog; q, discovery_job_id, after and limit; deduplicated and ACL filtered",
+        "x-required-access": "session"
+      }
+    },
     "/api/events/stream": {
       "get": {
         "operationId": "get_api_events_stream",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -2435,17 +2871,348 @@
         "x-required-access": "session"
       }
     },
+    "/api/files": {
+      "get": {
+        "operationId": "get_api_files",
+        "parameters": [
+          {
+            "description": "Omitted means v2; unsupported version returns 426",
+            "in": "header",
+            "name": "API-Version",
+            "schema": {
+              "enum": [
+                "2"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "discovery_job_id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "job_id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "quality",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilesPage"
+                }
+              }
+            },
+            "description": "Published gallery; q, job_id, quality, sort newest/oldest/title, after and limit; ACL filtered"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "426": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Published gallery; q, job_id, quality, sort newest/oldest/title, after and limit; ACL filtered",
+        "x-required-access": "session"
+      }
+    },
+    "/api/files/{fileId}": {
+      "get": {
+        "operationId": "get_api_files_fileId",
+        "parameters": [
+          {
+            "description": "Omitted means v2; unsupported version returns 426",
+            "in": "header",
+            "name": "API-Version",
+            "schema": {
+              "enum": [
+                "2"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "fileId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecord"
+                }
+              }
+            },
+            "description": "Published file metadata; same ACL as content and thumbnail"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "426": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Published file metadata; same ACL as content and thumbnail",
+        "x-required-access": "view"
+      }
+    },
     "/api/files/{fileId}/content": {
       "get": {
         "operationId": "get_api_files_fileId_content",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -2573,17 +3340,155 @@
         "x-required-access": "view"
       }
     },
+    "/api/files/{fileId}/thumbnail": {
+      "get": {
+        "operationId": "get_api_files_fileId_thumbnail",
+        "parameters": [
+          {
+            "description": "Omitted means v2; unsupported version returns 426",
+            "in": "header",
+            "name": "API-Version",
+            "schema": {
+              "enum": [
+                "2"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "fileId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Published JPEG preview; same ACL as video, unavailable preview returns 404"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "426": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "Structured error; see error codes and retry rules in contracts.md"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Published JPEG preview; same ACL as video, unavailable preview returns 404",
+        "x-required-access": "view"
+      }
+    },
     "/api/jobs": {
       "get": {
         "operationId": "get_api_jobs",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -2727,12 +3632,12 @@
         "operationId": "post_api_jobs",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -2761,7 +3666,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/JobConfig"
+                "$ref": "#/components/schemas/CreateJob"
               }
             }
           },
@@ -2776,7 +3681,7 @@
                 }
               }
             },
-            "description": "Create lazily split numeric range"
+            "description": "Discovery: numeric config; download: immutable media_ids selection of 1..10000 accessible downloadable materials"
           },
           "400": {
             "content": {
@@ -2884,7 +3789,7 @@
             "sessionCookie": []
           }
         ],
-        "summary": "Create lazily split numeric range",
+        "summary": "Discovery: numeric config; download: immutable media_ids selection of 1..10000 accessible downloadable materials",
         "x-required-access": "operator"
       }
     },
@@ -2893,12 +3798,12 @@
         "operationId": "get_api_jobs_jobId",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -3038,12 +3943,12 @@
         "operationId": "get_api_jobs_jobId_access",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -3181,12 +4086,12 @@
         "operationId": "put_api_jobs_jobId_access",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -3355,12 +4260,12 @@
         "operationId": "patch_api_jobs_jobId_config",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -3529,12 +4434,12 @@
         "operationId": "get_api_jobs_jobId_events",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -3730,12 +4635,12 @@
         "operationId": "get_api_jobs_jobId_export",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -3936,12 +4841,12 @@
         "operationId": "get_api_jobs_jobId_items",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -4137,12 +5042,12 @@
         "operationId": "post_api_jobs_jobId_items_retry",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -4311,12 +5216,12 @@
         "operationId": "post_api_jobs_jobId_pause",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -4485,12 +5390,12 @@
         "operationId": "post_api_jobs_jobId_resume",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -4659,12 +5564,12 @@
         "operationId": "post_api_jobs_jobId_start",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -4833,12 +5738,12 @@
         "operationId": "post_api_jobs_jobId_stop",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -5007,12 +5912,12 @@
         "operationId": "get_api_snapshot",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -5144,12 +6049,12 @@
         "operationId": "get_api_users",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -5279,12 +6184,12 @@
         "operationId": "post_api_users",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -5445,12 +6350,12 @@
         "operationId": "patch_api_users_userId",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -5619,12 +6524,12 @@
         "operationId": "get_api_workers",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -5754,12 +6659,12 @@
         "operationId": "post_api_workers",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -5920,12 +6825,12 @@
         "operationId": "post_api_workers_register",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -6083,12 +6988,12 @@
         "operationId": "get_api_workers_workerId",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -6226,12 +7131,12 @@
         "operationId": "patch_api_workers_workerId",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -6400,12 +7305,12 @@
         "operationId": "get_api_workers_workerId_actions",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -6543,12 +7448,12 @@
         "operationId": "post_api_workers_workerId_actions",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -6717,12 +7622,12 @@
         "operationId": "post_api_workers_workerId_certificates_revoke",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -6891,12 +7796,12 @@
         "operationId": "post_api_workers_workerId_certificates_rotate",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -7065,12 +7970,12 @@
         "operationId": "post_api_workers_workerId_complete",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -7245,12 +8150,12 @@
         "operationId": "post_api_workers_workerId_connections_connectionId_release",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -7433,12 +8338,12 @@
         "operationId": "post_api_workers_workerId_connections_connectionId_renew",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -7621,12 +8526,12 @@
         "operationId": "get_api_workers_workerId_control",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -7780,12 +8685,12 @@
         "operationId": "post_api_workers_workerId_downloads_downloadId_commit",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -7968,12 +8873,12 @@
         "operationId": "post_api_workers_workerId_fail",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -8148,12 +9053,12 @@
         "operationId": "post_api_workers_workerId_heartbeat",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -8328,12 +9233,12 @@
         "operationId": "post_api_workers_workerId_lease",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -8508,12 +9413,12 @@
         "operationId": "get_api_workers_workerId_metrics",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -8653,12 +9558,12 @@
         "operationId": "post_api_workers_workerId_permits",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -8833,12 +9738,12 @@
         "operationId": "delete_api_workers_workerId_permits_uid",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -9019,12 +9924,12 @@
         "operationId": "get_api_workers_workerId_permits_uid",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -9186,12 +10091,12 @@
         "operationId": "post_api_workers_workerId_progress",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -9366,12 +10271,12 @@
         "operationId": "get_api_workers_workerId_publications_publicationId",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -9533,12 +10438,12 @@
         "operationId": "post_api_workers_workerId_ssh_sessions",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -9707,12 +10612,12 @@
         "operationId": "get_api_workers_workerId_ssh_stream",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -9735,7 +10640,7 @@
                 }
               }
             },
-            "description": "Restricted terminal, fifteen minutes total and two minutes idle"
+            "description": "Interactive PTY shell without sudo; first JSON auth ticket/cols/rows, binary data, JSON resize/ack; fifteen minutes total and two minutes idle"
           },
           "400": {
             "content": {
@@ -9843,7 +10748,7 @@
             "sessionCookie": []
           }
         ],
-        "summary": "Restricted terminal, fifteen minutes total and two minutes idle",
+        "summary": "Interactive PTY shell without sudo; first JSON auth ticket/cols/rows, binary data, JSON resize/ack; fifteen minutes total and two minutes idle",
         "x-required-access": "admin"
       }
     },
@@ -9852,12 +10757,12 @@
         "operationId": "get_healthz",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -9978,12 +10883,12 @@
         "operationId": "get_internal_grafana-auth",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -10108,12 +11013,12 @@
         "operationId": "get_metrics",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }
@@ -10238,12 +11143,12 @@
         "operationId": "get_readyz",
         "parameters": [
           {
-            "description": "Omitted means v1; unsupported version returns 426",
+            "description": "Omitted means v2; unsupported version returns 426",
             "in": "header",
             "name": "API-Version",
             "schema": {
               "enum": [
-                "1"
+                "2"
               ],
               "type": "string"
             }

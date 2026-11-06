@@ -164,6 +164,26 @@ func Run(ctx context.Context, c Config) (Result, error) {
 	if e = rows.Err(); e != nil {
 		return result, e
 	}
+	previewRows, e := tx.Query(ctx, "SELECT p.relative_path,p.size_bytes,p.checksum FROM file_previews p JOIN files f ON f.id=p.file_id WHERE p.state='ready' AND f.ready ORDER BY p.relative_path")
+	if e != nil {
+		return result, e
+	}
+	for previewRows.Next() {
+		var f File
+		if e = previewRows.Scan(&f.Path, &f.Size, &f.Checksum); e != nil {
+			previewRows.Close()
+			return result, e
+		}
+		if !storage.ValidPath(f.Path) {
+			previewRows.Close()
+			return result, errors.New("invalid preview path")
+		}
+		m.Sidecars = append(m.Sidecars, f)
+	}
+	previewRows.Close()
+	if e = previewRows.Err(); e != nil {
+		return result, e
+	}
 	seenDirs := map[string]bool{}
 	for _, video := range m.Files {
 		dir := path.Dir(video.Path)

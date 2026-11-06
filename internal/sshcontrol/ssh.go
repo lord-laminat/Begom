@@ -161,3 +161,16 @@ func (b *limitedBuffer) Write(p []byte) (int, error) {
 	return n, nil
 }
 func (b *limitedBuffer) String() string { b.mu.Lock(); defer b.mu.Unlock(); return b.b.String() }
+
+// ConnectTerminal uses a separate login and key from the management helper.
+func (s *Service) ConnectTerminal(ctx context.Context, w model.WorkerConfig) (*ssh.Client, error) {
+	t := w.TerminalSSH
+	if t.User == "" || t.User == "root" || t.Port < 1 || t.Port > 65535 {
+		return nil, errors.New("terminal SSH profile invalid")
+	}
+	w.SSHUser, w.SSHPort, w.SSHHostKey, w.SSHSecret = t.User, t.Port, t.HostKey, t.Secret
+	return s.Connect(ctx, w)
+}
+func ValidDimensions(cols, rows int) bool {
+	return cols >= 20 && cols <= 500 && rows >= 5 && rows <= 200
+}

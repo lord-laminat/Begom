@@ -214,11 +214,11 @@ func (s *Store) LeaseResourceTx(ctx context.Context, tx pgx.Tx, worker string, a
 	if occupied {
 		return empty, 200, nil
 	}
-	var job, run string
+	var job, run, kind string
 	var frontier, end *string
 	var config []byte
 	var cv int64
-	e = tx.QueryRow(ctx, "SELECT j.id,j.run_id,j.frontier::text,j.range_end::text,j.config,j.config_version FROM jobs j JOIN job_workers jw ON jw.job_id=j.id WHERE jw.worker_id=$1 AND j.state='running' AND (j.frontier IS NOT NULL OR EXISTS(SELECT 1 FROM range_chunks c WHERE c.job_id=j.id AND c.status='pending')) ORDER BY j.updated_at,j.created_at FOR UPDATE OF j SKIP LOCKED LIMIT 1", worker).Scan(&job, &run, &frontier, &end, &config, &cv)
+	e = tx.QueryRow(ctx, "SELECT j.id,j.run_id,j.kind,j.frontier::text,j.range_end::text,j.config,j.config_version FROM jobs j JOIN job_workers jw ON jw.job_id=j.id WHERE jw.worker_id=$1 AND j.state='running' AND (j.frontier IS NOT NULL OR EXISTS(SELECT 1 FROM range_chunks c WHERE c.job_id=j.id AND c.status='pending')) ORDER BY j.updated_at,j.created_at FOR UPDATE OF j SKIP LOCKED LIMIT 1", worker).Scan(&job, &run, &kind, &frontier, &end, &config, &cv)
 	if errors.Is(e, pgx.ErrNoRows) {
 		return empty, 200, nil
 	}
@@ -242,6 +242,7 @@ func (s *Store) LeaseResourceTx(ctx context.Context, tx pgx.Tx, worker string, a
 	var l model.Lease
 	var start, stop string
 	var next *string
+	l.Kind = kind
 	l.JobID = job
 	l.RunID = run
 	l.Config = jc
@@ -259,6 +260,16 @@ func (s *Store) LeaseResourceTx(ctx context.Context, tx pgx.Tx, worker string, a
 			to = &n
 		}
 		b := model.BlockEnd(a, jc.BlockSize, to)
+		if kind == model.Download {
+			var first, last *string
+			if e = tx.QueryRow(ctx, "SELECT min(external_id)::text,max(external_id)::text FROM (SELECT external_id FROM job_targets WHERE job_id=$1 AND external_id>=$2 ORDER BY external_id LIMIT $3) t", job, a.String(), jc.BlockSize).Scan(&first, &last); e != nil {
+				return nil, 0, e
+			}
+			if first == nil {
+				return nil, 0, Conflict("missing_download_targets")
+			}
+			a, b = Number(*first), Number(*last)
+		}
 		l.ChunkID = model.NewID()
 		start, stop = a.String(), b.String()
 		n := start
@@ -302,6 +313,26 @@ func (s *Store) LeaseResourceTx(ctx context.Context, tx pgx.Tx, worker string, a
 	rows.Close()
 	if e = rows.Err(); e != nil {
 		return nil, 0, e
+	}
+	if kind == model.Download {
+		targets, err := tx.Query(ctx, "SELECT media_id,external_id::text,canonical_id FROM job_targets WHERE job_id=$1 AND external_id BETWEEN $2 AND $3 ORDER BY external_id", job, start, stop)
+		if err != nil {
+			return nil, 0, err
+		}
+		for targets.Next() {
+			var t model.Target
+			var id string
+			if err = targets.Scan(&t.MediaID, &id, &t.CanonicalID); err != nil {
+				targets.Close()
+				return nil, 0, err
+			}
+			t.ExternalID = Number(id)
+			l.Targets = append(l.Targets, t)
+		}
+		targets.Close()
+		if err = targets.Err(); err != nil {
+			return nil, 0, err
+		}
 	}
 	if _, e = tx.Exec(ctx, "UPDATE jobs SET updated_at=clock_timestamp() WHERE id=$1", job); e != nil {
 		return nil, 0, e
@@ -353,6 +384,18 @@ func (s *Store) Advance(ctx context.Context, tx pgx.Tx, job, chunk string) error
 	}
 	if next == nil {
 		return nil
+	}
+	var kind string
+	if e := tx.QueryRow(ctx, "SELECT kind FROM jobs WHERE id=$1", job).Scan(&kind); e != nil {
+		return e
+	}
+	if kind == model.Download {
+		var value *string
+		if e := tx.QueryRow(ctx, `SELECT min(t.external_id)::text FROM job_targets t LEFT JOIN items i ON i.job_id=t.job_id AND i.external_id=t.external_id AND i.final WHERE t.job_id=$1 AND t.external_id BETWEEN $2 AND $3 AND i.external_id IS NULL`, job, *next, end).Scan(&value); e != nil {
+			return e
+		}
+		_, e := tx.Exec(ctx, "UPDATE range_chunks SET next_id=$2,updated_at=clock_timestamp() WHERE id=$1", chunk, value)
+		return e
 	}
 	n, last := Number(*next), Number(end)
 	rows, e := tx.Query(ctx, "SELECT external_id::text FROM items WHERE job_id=$1 AND external_id BETWEEN $2 AND $3 AND final ORDER BY items.external_id", job, *next, end)

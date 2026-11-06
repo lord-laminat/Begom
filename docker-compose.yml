@@ -3,7 +3,7 @@ name: ${COMPOSE_PROJECT_NAME:-begom}
 x-logging: &logging
   driver: fluentd
   options:
-    fluentd-address: 127.0.0.1:24224
+    fluentd-address: 127.0.0.1:${BEGOM_LOG_PORT:-24224}
     fluentd-async: 'true'
     fluentd-buffer-limit: '4096'
     mode: non-blocking
@@ -13,7 +13,7 @@ x-logging: &logging
     cache-max-file: '3'
 
 x-app: &app
-  image: begom-app:1.0.0
+  image: begom-app:2.0.0
   build: {context: ., target: app}
   restart: unless-stopped
   init: true
@@ -26,8 +26,11 @@ x-app: &app
 
 x-worker: &worker
   <<: *app
-  entrypoint: [/usr/local/bin/node-helper]
-  command: [serve, --config, /config/agent.json]
+  image: begom-worker:2.0.0
+  build: {context: ., target: worker}
+  entrypoint: [/bin/bash, /usr/local/bin/start-worker]
+  cap_add: [SETUID, SETGID]
+  tmpfs: ['/tmp:size=64m,mode=1777', '/run/begom-terminal:size=1m,uid=10050,gid=10050,mode=0700']
   depends_on: {coordinator: {condition: service_healthy}}
   mem_limit: 256m
   cpus: 2
@@ -86,7 +89,7 @@ services:
     networks: [control, edge]
     depends_on: {permissions: {condition: service_completed_successfully}}
     command: [server, -config=/bao/config/config.hcl]
-    ports: ['127.0.0.1:8200:8200']
+    ports: ['127.0.0.1:${BEGOM_BAO_PORT:-8200}:8200']
     volumes:
       - bao-data:/bao/file
       - ./deploy/openbao/config.hcl:/bao/config/config.hcl:ro
@@ -125,7 +128,8 @@ services:
 
   worker-1:
     <<: *worker
-    user: '10001:10000'
+    user: '0:10000'
+    environment: {BEGOM_AGENT_UID: '10001'}
     volumes:
       - ${BEGOM_STATE_DIR:-./.local}/config/worker-1.json:/config/agent.json:ro
       - ${BEGOM_STATE_DIR:-./.local}/secrets/ca.crt:/run/secrets/ca.crt:ro
@@ -135,6 +139,9 @@ services:
       - ${BEGOM_STATE_DIR:-./.local}/secrets/worker-1-secret-id:/run/secrets/secret-id:ro
       - ${BEGOM_STATE_DIR:-./.local}/secrets/worker-1-ssh-host.key:/run/secrets/ssh-host.key:ro
       - ${BEGOM_STATE_DIR:-./.local}/secrets/worker-1-ssh-client.pub:/run/secrets/ssh-client.pub:ro
+      - ${BEGOM_STATE_DIR:-./.local}/secrets/worker-1-terminal-host.key:/run/secrets/terminal-host.key:ro
+      - ${BEGOM_STATE_DIR:-./.local}/secrets/worker-1-terminal-client.pub:/run/secrets/terminal-client.pub:ro
+      - ${BEGOM_STATE_DIR:-./.local}/terminal/worker-1:/home/begom-shell
       - ${BEGOM_STATE_DIR:-./.local}/secrets/package.pub:/run/secrets/package.pub:ro
       - ${BEGOM_STATE_DIR:-./.local}/storage/.begom-volume:/data/.begom-volume:ro
       - ${BEGOM_STATE_DIR:-./.local}/storage/staging/worker-1:/data/staging/worker-1
@@ -142,7 +149,8 @@ services:
 
   worker-2:
     <<: *worker
-    user: '10002:10000'
+    user: '0:10000'
+    environment: {BEGOM_AGENT_UID: '10002'}
     volumes:
       - ${BEGOM_STATE_DIR:-./.local}/config/worker-2.json:/config/agent.json:ro
       - ${BEGOM_STATE_DIR:-./.local}/secrets/ca.crt:/run/secrets/ca.crt:ro
@@ -152,6 +160,9 @@ services:
       - ${BEGOM_STATE_DIR:-./.local}/secrets/worker-2-secret-id:/run/secrets/secret-id:ro
       - ${BEGOM_STATE_DIR:-./.local}/secrets/worker-2-ssh-host.key:/run/secrets/ssh-host.key:ro
       - ${BEGOM_STATE_DIR:-./.local}/secrets/worker-2-ssh-client.pub:/run/secrets/ssh-client.pub:ro
+      - ${BEGOM_STATE_DIR:-./.local}/secrets/worker-2-terminal-host.key:/run/secrets/terminal-host.key:ro
+      - ${BEGOM_STATE_DIR:-./.local}/secrets/worker-2-terminal-client.pub:/run/secrets/terminal-client.pub:ro
+      - ${BEGOM_STATE_DIR:-./.local}/terminal/worker-2:/home/begom-shell
       - ${BEGOM_STATE_DIR:-./.local}/secrets/package.pub:/run/secrets/package.pub:ro
       - ${BEGOM_STATE_DIR:-./.local}/storage/.begom-volume:/data/.begom-volume:ro
       - ${BEGOM_STATE_DIR:-./.local}/storage/staging/worker-2:/data/staging/worker-2
@@ -159,7 +170,8 @@ services:
 
   worker-3:
     <<: *worker
-    user: '10003:10000'
+    user: '0:10000'
+    environment: {BEGOM_AGENT_UID: '10003'}
     volumes:
       - ${BEGOM_STATE_DIR:-./.local}/config/worker-3.json:/config/agent.json:ro
       - ${BEGOM_STATE_DIR:-./.local}/secrets/ca.crt:/run/secrets/ca.crt:ro
@@ -169,6 +181,9 @@ services:
       - ${BEGOM_STATE_DIR:-./.local}/secrets/worker-3-secret-id:/run/secrets/secret-id:ro
       - ${BEGOM_STATE_DIR:-./.local}/secrets/worker-3-ssh-host.key:/run/secrets/ssh-host.key:ro
       - ${BEGOM_STATE_DIR:-./.local}/secrets/worker-3-ssh-client.pub:/run/secrets/ssh-client.pub:ro
+      - ${BEGOM_STATE_DIR:-./.local}/secrets/worker-3-terminal-host.key:/run/secrets/terminal-host.key:ro
+      - ${BEGOM_STATE_DIR:-./.local}/secrets/worker-3-terminal-client.pub:/run/secrets/terminal-client.pub:ro
+      - ${BEGOM_STATE_DIR:-./.local}/terminal/worker-3:/home/begom-shell
       - ${BEGOM_STATE_DIR:-./.local}/secrets/package.pub:/run/secrets/package.pub:ro
       - ${BEGOM_STATE_DIR:-./.local}/storage/.begom-volume:/data/.begom-volume:ro
       - ${BEGOM_STATE_DIR:-./.local}/storage/staging/worker-3:/data/staging/worker-3
@@ -178,7 +193,7 @@ services:
     <<: *app
     entrypoint: [/usr/local/bin/mockdonor]
     networks: [control, edge]
-    ports: ['127.0.0.1:8090:8090']
+    ports: ['127.0.0.1:${BEGOM_MOCK_PORT:-8090}:8090']
     depends_on: {permissions: {condition: service_completed_successfully}}
     volumes: ['${BEGOM_STATE_DIR:-./.local}/secrets/mock-token:/run/secrets/mock-token:ro']
     mem_limit: 128m
@@ -189,7 +204,7 @@ services:
     restart: unless-stopped
     networks: [control, edge]
     depends_on: {coordinator: {condition: service_healthy}, grafana: {condition: service_started}}
-    ports: ['127.0.0.1:8443:8443']
+    ports: ['127.0.0.1:${BEGOM_WEB_PORT:-8443}:8443']
     volumes:
       - ${BEGOM_STATE_DIR:-./.local}/secrets/web.crt:/run/secrets/web.crt:ro
       - ${BEGOM_STATE_DIR:-./.local}/secrets/web.key:/run/secrets/web.key:ro
@@ -294,7 +309,7 @@ services:
     user: '0:0'
     restart: unless-stopped
     networks: [control, edge]
-    ports: ['127.0.0.1:24224:24224']
+    ports: ['127.0.0.1:${BEGOM_LOG_PORT:-24224}:24224']
     logging: {driver: json-file, options: {max-size: 10m, max-file: '3'}}
     volumes:
       - ./deploy/fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
@@ -305,7 +320,7 @@ services:
 
   backup:
     logging: *logging
-    image: begom-backup:1.0.0
+    image: begom-backup:2.0.0
     build: {context: ., target: backup}
     profiles: [backup]
     networks: [control]
@@ -320,7 +335,7 @@ services:
       - backup-repository:/repository
 
   storage-faults:
-    image: begom-storage-faults:1.0.0
+    image: begom-storage-faults:2.0.0
     build: {context: ., target: storage-faults}
     profiles: [verification]
     network_mode: none
@@ -333,7 +348,7 @@ services:
     mem_limit: 128m
 
 networks:
-  control: {internal: true, ipam: {config: [{subnet: 172.30.69.0/24}]}}
+  control: {internal: true, ipam: {config: [{subnet: "${BEGOM_CONTROL_SUBNET:-172.30.69.0/24}"}]}}
   edge: {}
 volumes:
   postgres-data: {}

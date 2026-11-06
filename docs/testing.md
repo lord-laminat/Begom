@@ -84,3 +84,20 @@ Linux-драйвер допустим только с явно заданным 
 Нагрузочная программа первой поставки измеряет 120 потоков на трёх узлах с небольшими синтетическими видео. Отдельно выполняются длительный проход большого диапазона, десятки агентов, несколько одновременных больших файлов и измерение NAS/сети на целевом оборудовании. Они не выводятся из теста небольших файлов. Размер mock-файла настраивается до 128 МиБ; для многогигабайтных испытаний используйте принадлежащий владельцу донор с корректными Range/ETag и тем же контрактом.
 
 Для демонстрации §23: покажите конечное задание, lease/checkpoint и файлы, завершите тестовый агент, дождитесь перевыдачи, верните агент, измените потоки/серверы в настройках, включите контролируемый 429, покажите адаптацию C6 и Retry-After, выполните ENOSPC-профиль, перезапустите координатор и сравните подтверждённые file ID/SHA-256. Метрики, журнал и аудит доступны в приложении и административной Grafana.
+
+## Приёмка v2
+
+Рабочий профиль Kinescope запускается через `bash deploy/local-v2.sh up`; отдельный mock-профиль — по [инструкции](install-local.md). Приёмка требует остановки чужих активных заданий только внутри тестового профиля.
+
+```sh
+make check
+BEGOM_TEST_DATABASE_URL=postgres://postgres@localhost:55435/postgres?sslmode=disable make integration
+bin/begomctl acceptance --config .local-v2-mock/client.json --output artifacts/v2/acceptance
+python3 tests/browser/run.py --config .local-v2-mock/client.json --output artifacts/v2/browser
+python3 tests/faults/run.py --config .local-v2-mock/client.json --output artifacts/v2/faults
+python3 tests/kinescope/run.py --config .local-v2-kinescope/client.json --output artifacts/v2/kinescope
+```
+
+Для локального mock-профиля экспортируйте указанные в инструкции project/state/ports/Compose-переменные до команд, запускающих Docker. Тест реального донора проверяет текущее публичное разрешение; числовой пример может стать недоступен, тогда нужен другой разрешённый материал. Ссылки скачивания и секреты в протокол не записываются.
+
+На NixOS Playwright использует нативные Node.js/Chromium. Пример среды: `nix-shell -E 'with import <nixpkgs> {}; mkShell { packages=[nodejs chromium]; LD_LIBRARY_PATH=lib.makeLibraryPath [stdenv.cc.cc.lib]; }'`, затем `PLAYWRIGHT_NODEJS_PATH=$(command -v node) python tests/browser/run.py --executable $(command -v chromium) ...`. В Ubuntu CI используются установленные Playwright браузеры.

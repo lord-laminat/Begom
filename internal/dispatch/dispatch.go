@@ -160,6 +160,15 @@ func (d *Dispatcher) request(ctx context.Context, q db.Queryer, worker string, r
 	if e := d.Epoch.CheckWith(ctx, q); e != nil {
 		return nil, 0, e
 	}
+	if r.Class == "download" {
+		var kind string
+		if e := q.QueryRow(ctx, "SELECT kind FROM jobs WHERE id=$1", r.JobID).Scan(&kind); e != nil {
+			return nil, 0, e
+		}
+		if kind != model.Download {
+			return nil, 0, db.Bad("discovery_cannot_download", "Discovery cannot request video downloads")
+		}
+	}
 	job, e := d.Store.CheckLeaseWith(ctx, q, worker, r.LeaseRef)
 	if e != nil {
 		return nil, 0, e

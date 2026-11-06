@@ -25,7 +25,6 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
-	"net/url"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -35,17 +34,20 @@ import (
 )
 
 type Server struct {
-	Store         *db.Store
-	Config        config.Coordinator
-	Auth          *auth.Service
-	Dispatch      *dispatch.Dispatcher
-	Publisher     *publication.Service
-	Volume        *storage.Volume
-	SSH           *sshcontrol.Service
-	Secrets       *secrets.Bao
-	Log           *slog.Logger
-	loginMu       sync.Mutex
-	loginAttempts map[string][]time.Time
+	// Zero policy uses production limits; shorter limits support deterministic
+	// integration checks without waiting fifteen minutes per session.
+	TerminalPolicy TerminalPolicy
+	Store          *db.Store
+	Config         config.Coordinator
+	Auth           *auth.Service
+	Dispatch       *dispatch.Dispatcher
+	Publisher      *publication.Service
+	Volume         *storage.Volume
+	SSH            *sshcontrol.Service
+	Secrets        *secrets.Bao
+	Log            *slog.Logger
+	loginMu        sync.Mutex
+	loginAttempts  map[string][]time.Time
 }
 
 func (s *Server) Middleware(next http.Handler) http.Handler {
@@ -96,6 +98,10 @@ func (s *Server) Human() http.Handler {
 		auth.Cookies(w, "", "")
 		s.json(w, 200, map[string]bool{"ok": true})
 	}))
+	m.HandleFunc("GET /api/catalog", s.user(false, s.catalog))
+	m.HandleFunc("GET /api/files", s.user(false, s.files))
+	m.HandleFunc("GET /api/files/{fileId}", s.user(false, s.file))
+	m.HandleFunc("GET /api/files/{fileId}/thumbnail", s.user(false, s.thumbnail))
 	m.HandleFunc("GET /api/jobs", s.user(false, s.jobs))
 	m.HandleFunc("POST /api/jobs", s.user(true, s.createJob))
 	m.HandleFunc("GET /api/jobs/{jobId}", s.user(false, s.job))
@@ -367,14 +373,14 @@ func (s *Server) createJob(w http.ResponseWriter, r *http.Request, u auth.User) 
 		s.denied(w, r)
 		return
 	}
-	var c model.JobConfig
+	var c model.CreateJob
 	b, e := s.decode(w, r, &c)
 	if e != nil {
 		s.fail(w, r, e)
 		return
 	}
 	s.mutate(w, r, u.ID, b, func(tx pgx.Tx) (any, int, error) {
-		return s.Store.CreateJob(r.Context(), tx, u.ID, r.Header.Get("X-Request-ID"), c)
+		return s.Store.CreateRequestedJob(r.Context(), tx, u.ID, r.Header.Get("X-Request-ID"), c)
 	})
 }
 func (s *Server) job(w http.ResponseWriter, r *http.Request, u auth.User) {
@@ -722,6 +728,7 @@ func (s *Server) filterWorker(ctx context.Context, u auth.User, w *model.Worker)
 	if u.Admin() {
 		return nil
 	}
+	w.TerminalSSH = model.TerminalSSH{}
 	leases := []model.Lease{}
 	for _, l := range w.Leases {
 		if e := s.Store.CheckAccess(ctx, u.ID, l.JobID, false, false); e == nil {
@@ -808,6 +815,11 @@ func (s *Server) saveWorker(w http.ResponseWriter, r *http.Request, u auth.User)
 				return nil, 0, e
 			}
 			in.SSHSecret = old.SSHSecret
+			if in.TerminalSSH.User == "" {
+				in.TerminalSSH = old.TerminalSSH
+			} else if in.TerminalSSH.Secret == "" {
+				in.TerminalSSH.Secret = old.TerminalSSH.Secret
+			}
 			if in.StoragePath == "" {
 				in.StoragePath = old.StoragePath
 			}
@@ -816,6 +828,11 @@ func (s *Server) saveWorker(w http.ResponseWriter, r *http.Request, u auth.User)
 			var old model.WorkerConfig
 			if e = json.Unmarshal(previous, &old); e != nil {
 				return nil, 0, e
+			}
+			if in.TerminalSSH.User == "" {
+				in.TerminalSSH = old.TerminalSSH
+			} else if in.TerminalSSH.Secret == "" {
+				in.TerminalSSH.Secret = old.TerminalSSH.Secret
 			}
 			if old.StoragePath != in.StoragePath {
 				if in.Enabled {
@@ -912,35 +929,12 @@ func (s *Server) audit(w http.ResponseWriter, r *http.Request, u auth.User) {
 	s.json(w, 200, map[string]any{"audit": out})
 }
 func (s *Server) content(w http.ResponseWriter, r *http.Request, u auth.User) {
-	var rel, mime string
-	var size string
-	e := s.Store.Pool.QueryRow(r.Context(), "SELECT f.storage_path,f.mime_type,f.size_bytes::text FROM files f WHERE f.id=$1 AND f.ready AND ($3 OR EXISTS(SELECT 1 FROM items i JOIN job_access a ON a.job_id=i.job_id WHERE i.media_id=f.media_id AND i.status='completed' AND a.user_id=$2))", r.PathValue("fileId"), u.ID, u.Admin()).Scan(&rel, &mime, &size)
+	v, e := s.Store.File(r.Context(), u.ID, u.Admin(), r.PathValue("fileId"))
 	if e != nil {
 		s.fail(w, r, e)
 		return
 	}
-	if !storage.ValidPath(rel) {
-		s.fail(w, r, db.Conflict("invalid_catalog_path"))
-		return
-	}
-	root, e := s.Volume.OpenRoot()
-	if e != nil {
-		s.fail(w, r, e)
-		return
-	}
-	defer root.Close()
-	st, e := storage.StatRegular(root, path.Join("published", rel))
-	if e != nil || !st.Mode().IsRegular() || uint64(st.Size()) != uint64(db.Number(size)) {
-		s.fail(w, r, db.Conflict("file_unavailable"))
-		return
-	}
-	encoded := []string{}
-	for _, part := range strings.Split(rel, "/") {
-		encoded = append(encoded, url.PathEscape(part))
-	}
-	w.Header().Set("X-Accel-Redirect", "/_published/"+strings.Join(encoded, "/"))
-	w.Header().Set("Content-Type", mime)
-	w.WriteHeader(200)
+	s.sendPublished(w, r, v.StoragePath, v.MIME, uint64(v.Size))
 }
 func (s *Server) register(w http.ResponseWriter, r *http.Request, id string) {
 	var in model.Register
@@ -1140,6 +1134,7 @@ func heartbeatTime(t *time.Time) float64 {
 	return float64(t.UnixMilli()) / 1000
 }
 func (s *Server) Run(ctx context.Context) {
+	go s.runPreviews(ctx)
 	ticker := time.NewTicker(time.Duration(s.Config.SweepMS) * time.Millisecond)
 	nextRotation := time.Now().Add(time.Minute)
 	defer ticker.Stop()

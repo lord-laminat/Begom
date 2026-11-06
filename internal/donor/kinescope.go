@@ -329,3 +329,14 @@ func PageURL(template string, id model.Number) (string, error) {
 	}
 	return strings.Replace(template, "{id}", id.String(), 1), nil
 }
+
+// Qualities exposes only video descriptors, never expiring download URLs.
+func Qualities(assets []Asset) []model.Quality {
+	out := []model.Quality{}
+	for _, asset := range assets {
+		if videoAsset(asset) {
+			out = append(out, model.Quality{Name: asset.Quality, Size: asset.Size})
+		}
+	}
+	return out
+}

@@ -243,6 +243,13 @@ func BaoInit(ctx context.Context, dir, endpoint string) error {
 			if e = api.put(ctx, "begom/coordinator/ssh/"+role, map[string]string{"private_key": string(private)}); e != nil {
 				return e
 			}
+			terminalKey, err := os.ReadFile(filepath.Join(dir, "bootstrap", role+"-terminal-client.key"))
+			if err != nil {
+				return err
+			}
+			if e = api.put(ctx, "begom/coordinator/terminal/"+role, map[string]string{"private_key": string(terminalKey)}); e != nil {
+				return e
+			}
 		}
 	}
 	values := map[string]string{}

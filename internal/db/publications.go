@@ -106,7 +106,7 @@ func (s *Store) FinishPublication(ctx context.Context, p Publication) (string, e
 		}
 	}
 	if accepted == nil {
-		if _, e = tx.Exec(ctx, "INSERT INTO files(id,download_id,media_id,publication_id,storage_path,size_bytes,checksum,mime_type,ready) VALUES($1,$2,$3,$4,$5,$6,$7,$8,true)", fileID, p.DownloadID, p.MediaID, p.ID, p.Path, p.Size, p.Checksum, p.MIME); e != nil {
+		if _, e = tx.Exec(ctx, "INSERT INTO files(id,download_id,media_id,publication_id,storage_path,size_bytes,checksum,mime_type,ready,metadata) VALUES($1,$2,$3,$4,$5,$6,$7,$8,true,$9)", fileID, p.DownloadID, p.MediaID, p.ID, p.Path, p.Size, p.Checksum, p.MIME, JSON(p.Metadata)); e != nil {
 			return "", e
 		}
 		if _, e = tx.Exec(ctx, "UPDATE media_metadata SET accepted_file_id=$2 WHERE id=$1", p.MediaID, fileID); e != nil {

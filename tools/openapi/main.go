@@ -94,13 +94,17 @@ func schema(t reflect.Type) any {
 	}
 }
 func main() {
-	for _, v := range []any{model.Job{}, model.Worker{}, model.Progress{}, model.Permit{}, model.PermitRequest{}, model.Commit{}, model.Feedback{}, model.Heartbeat{}, model.HeartbeatReply{}, model.Lease{}, model.LeaseRef{}, model.Register{}, model.APIError{}, auth.User{}, auth.UserInput{}, db.Publication{}} {
+	for _, v := range []any{model.CreateJob{}, db.CatalogItem{}, db.FileRecord{}, model.Job{}, model.Worker{}, model.Progress{}, model.Permit{}, model.PermitRequest{}, model.Commit{}, model.Feedback{}, model.Heartbeat{}, model.HeartbeatReply{}, model.Lease{}, model.LeaseRef{}, model.Register{}, model.APIError{}, auth.User{}, auth.UserInput{}, db.Publication{}} {
 		schema(reflect.TypeOf(v))
 	}
+	schemas["CatalogPage"] = object(obj{"items": array(ref("CatalogItem")), "next_after": str()})
+	schemas["FilesPage"] = object(obj{"files": array(ref("FileRecord")), "next_after": str()})
+	schemas["CreateJob"].(obj)["required"] = []string{"kind", "config"}
+	schemas["CreateJob"].(obj)["properties"].(obj)["kind"] = obj{"type": "string", "enum": []string{model.Discovery, model.Download}}
 	schemas["Empty"] = object(obj{})
 	schemas["Login"] = object(obj{"username": str(), "password": obj{"type": "string", "writeOnly": true}})
 	schemas["Session"] = object(obj{"user": ref("User"), "csrf_token": str()})
-	schemas["JobCreated"] = object(obj{"job_id": str(), "run_id": str(), "config_version": obj{"type": "integer"}, "state": str(), "range": ref("Range"), "config": ref("JobConfig")})
+	schemas["JobCreated"] = object(obj{"job_id": str(), "run_id": str(), "config_version": obj{"type": "integer"}, "state": str(), "kind": str(), "selection_count": obj{"type": "integer"}, "range": ref("Range"), "config": ref("JobConfig")})
 	schemas["JobAction"] = object(obj{"job_id": str(), "state": str(), "run_id": str(), "reason": str()})
 	schemas["ConfigReply"] = object(obj{"config_version": obj{"type": "integer"}, "config": ref("JobConfig")})
 	schemas["Retry"] = object(obj{"external_ids": array(schema(reflect.TypeFor[model.Number]()))})
@@ -128,7 +132,11 @@ POST|/api/auth/login|Login|Session|200|public|Create an eight-hour secure sessio
 GET|/api/auth/session||Session|200|session|Current identity and CSRF token
 POST|/api/auth/logout|Empty|Acknowledgement|200|session|Revoke current session
 GET|/api/jobs||Jobs|200|session|Jobs filtered by ACL, newest first; before job ID cursor and limit 1..200
-POST|/api/jobs|JobConfig|JobCreated|201|operator|Create lazily split numeric range
+GET|/api/catalog||CatalogPage|200|session|Downloadable discovery catalog; q, discovery_job_id, after and limit; deduplicated and ACL filtered
+GET|/api/files||FilesPage|200|session|Published gallery; q, job_id, quality, sort newest/oldest/title, after and limit; ACL filtered
+GET|/api/files/{fileId}||FileRecord|200|view|Published file metadata; same ACL as content and thumbnail
+GET|/api/files/{fileId}/thumbnail|||200|view|Published JPEG preview; same ACL as video, unavailable preview returns 404
+POST|/api/jobs|CreateJob|JobCreated|201|operator|Discovery: numeric config; download: immutable media_ids selection of 1..10000 accessible downloadable materials
 GET|/api/jobs/{jobId}||Job|200|view|Status and continuous confirmed progress
 POST|/api/jobs/{jobId}/start|Empty|JobAction|200|manage|Validate resources and start
 POST|/api/jobs/{jobId}/pause|Empty|JobAction|200|manage|Finish active items then pause
@@ -157,7 +165,7 @@ GET|/api/audit||Acknowledgement|200|admin|Administrative audit log
 GET|/api/snapshot||Snapshot|200|session|Complete current ACL-filtered interface snapshot
 GET|/api/events/stream||Snapshot|101|session|WebSocket snapshot every second; reread HTTP on reconnect
 POST|/api/workers/{workerId}/ssh/sessions|Empty|Acknowledgement|201|admin|One-use ticket, thirty seconds; transmit in first WSS frame
-GET|/api/workers/{workerId}/ssh/stream||Acknowledgement|101|admin|Restricted terminal, fifteen minutes total and two minutes idle
+GET|/api/workers/{workerId}/ssh/stream||Acknowledgement|101|admin|Interactive PTY shell without sudo; first JSON auth ticket/cols/rows, binary data, JSON resize/ack; fifteen minutes total and two minutes idle
 GET|/api/files/{fileId}/content|||200|view|Published catalog entry only; authenticated NGINX internal redirect; Range and If-Range
 POST|/api/workers/register|Register|Acknowledgement|200|mtls|Bind worker certificate to a compatible agent session
 POST|/api/workers/{workerId}/heartbeat|Heartbeat|HeartbeatReply|200|mtls|Renew matching leases and submit one-second measurements
@@ -183,13 +191,18 @@ GET|/internal/grafana-auth|||204|admin|Internal NGINX administrator authenticati
 	for _, line := range strings.Split(strings.TrimSpace(registry), "\n") {
 		f := strings.Split(line, "|")
 		method, path, request, response, status, access, description := f[0], f[1], f[2], f[3], f[4], f[5], f[6]
-		params := []any{obj{"name": "API-Version", "in": "header", "schema": obj{"type": "string", "enum": []string{"1"}}, "description": "Omitted means v1; unsupported version returns 426"}}
+		params := []any{obj{"name": "API-Version", "in": "header", "schema": obj{"type": "string", "enum": []string{model.APIVersion}}, "description": "Omitted means v2; unsupported version returns 426"}}
 		for _, m := range pattern.FindAllStringSubmatch(path, -1) {
 			params = append(params, obj{"name": m[1], "in": "path", "required": true, "schema": str()})
 		}
 		mut := method != "GET"
 		if path == "/api/jobs" && !mut {
 			for _, name := range []string{"before", "limit"} {
+				params = append(params, obj{"name": name, "in": "query", "schema": str()})
+			}
+		}
+		if path == "/api/catalog" || path == "/api/files" {
+			for _, name := range []string{"q", "discovery_job_id", "job_id", "quality", "sort", "after", "limit"} {
 				params = append(params, obj{"name": name, "in": "query", "schema": str()})
 			}
 		}

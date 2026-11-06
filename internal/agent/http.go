@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"crypto/x509"
 	"errors"
 	"github.com/rychkin/Begom/internal/dispatch"
 	"github.com/rychkin/Begom/internal/donor"
@@ -9,12 +10,18 @@ import (
 	"github.com/rychkin/Begom/internal/target"
 	"github.com/rychkin/Begom/internal/wire"
 	"io"
+	"log/slog"
+	"net"
 	"net/http"
+	"net/http/httptrace"
+	"net/url"
+	"strings"
 	"sync"
 	"time"
 )
 
 type DonorHTTP struct {
+	Log       *slog.Logger
 	Client    *wire.Client
 	Worker    string
 	Policy    target.Policy
@@ -107,6 +114,10 @@ func (h *DonorHTTP) Get(ctx context.Context, ref model.LeaseRef, class, raw stri
 			cancel()
 			return nil, e
 		}
+		var phaseMu sync.Mutex
+		phase := "connect"
+		trace := &httptrace.ClientTrace{TLSHandshakeStart: func() { phaseMu.Lock(); phase = "tls_handshake"; phaseMu.Unlock() }, GotConn: func(httptrace.GotConnInfo) { phaseMu.Lock(); phase = "request"; phaseMu.Unlock() }, WroteRequest: func(httptrace.WroteRequestInfo) { phaseMu.Lock(); phase = "response_headers"; phaseMu.Unlock() }}
+		req = req.WithContext(httptrace.WithClientTrace(req.Context(), trace))
 		req.Header = headers.Clone()
 		if req.Header == nil {
 			req.Header = http.Header{}
@@ -119,7 +130,14 @@ func (h *DonorHTTP) Get(ctx context.Context, ref model.LeaseRef, class, raw stri
 		response, e := client.Do(req)
 		if e != nil {
 			body.Close()
-			return nil, errors.New("donor_request_failed")
+			code := transportErrorCode(e)
+			if h.Log != nil {
+				phaseMu.Lock()
+				failedPhase := phase
+				phaseMu.Unlock()
+				h.Log.Warn("donor transport failed", "operation", "donor.request", "error_code", code, "phase", failedPhase, "request_class", class, "donor_host", u.Hostname())
+			}
+			return nil, errors.New(code)
 		}
 		body.body = response.Body
 		body.feedback.Status = response.StatusCode
@@ -208,4 +226,45 @@ func (b *trackedBody) renew() {
 			b.deadline = sent.Add(r.Expires.Sub(r.Server) - dispatch.ClockMargin)
 		}
 	}
+}
+
+// Classify transport failures without copying URL paths, queries or headers.
+func transportErrorCode(err error) string {
+	var u *url.Error
+	if errors.As(err, &u) {
+		err = u.Err
+	}
+	if errors.Is(err, context.Canceled) {
+		return "donor_request_cancelled"
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return "donor_timeout"
+	}
+	var authority x509.UnknownAuthorityError
+	var hostname x509.HostnameError
+	var cert x509.CertificateInvalidError
+	if errors.As(err, &authority) || errors.As(err, &hostname) || errors.As(err, &cert) {
+		return "donor_certificate_invalid"
+	}
+	var network net.Error
+	if errors.As(err, &network) && network.Timeout() {
+		return "donor_timeout"
+	}
+	for cause := err; cause != nil; cause = errors.Unwrap(cause) {
+		switch cause.Error() {
+		case "donor address not allowed":
+			return "donor_address_not_allowed"
+		case "donor DNS resolution failed":
+			return "donor_dns_failed"
+		case "donor host not allowed":
+			return "donor_host_not_allowed"
+		}
+	}
+	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+		return "donor_connection_closed"
+	}
+	if strings.Contains(err.Error(), "tls:") {
+		return "donor_tls_handshake_failed"
+	}
+	return "donor_request_failed"
 }

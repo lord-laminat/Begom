@@ -9,12 +9,9 @@ import (
 	"github.com/rychkin/Begom/internal/auth"
 	"github.com/rychkin/Begom/internal/db"
 	"github.com/rychkin/Begom/internal/model"
-	"github.com/rychkin/Begom/internal/nodecontrol"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -403,136 +400,4 @@ func (s *Server) sshSession(w http.ResponseWriter, r *http.Request, u auth.User)
 		e = db.Audit(r.Context(), tx, u.ID, "ssh.session.create", id, r.Header.Get("X-Request-ID"), map[string]string{"session_id": session})
 		return map[string]any{"session_id": session, "ticket": ticket, "expires_in_seconds": 30}, 201, e
 	})
-}
-func (s *Server) sshStream(w http.ResponseWriter, r *http.Request, u auth.User) {
-	if !u.Admin() {
-		s.denied(w, r)
-		return
-	}
-	worker, e := s.Store.GetWorker(r.Context(), r.PathValue("workerId"))
-	if e != nil {
-		s.fail(w, r, e)
-		return
-	}
-	origin, _ := url.Parse(s.Config.PublicOrigin)
-	c, e := websocket.Accept(w, r, &websocket.AcceptOptions{OriginPatterns: []string{origin.Host}})
-	if e != nil {
-		return
-	}
-	defer c.CloseNow()
-	c.SetReadLimit(1024)
-	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Minute)
-	defer cancel()
-	var first struct {
-		Ticket string `json:"ticket"`
-	}
-	qctx, stop := context.WithTimeout(ctx, 5*time.Second)
-	e = wsjson.Read(qctx, c, &first)
-	stop()
-	if e != nil {
-		return
-	}
-	var sessionID string
-	e = s.Store.Pool.QueryRow(ctx, "UPDATE ssh_sessions SET used=true WHERE ticket_hash=$1 AND user_id=$2 AND worker_id=$3 AND NOT used AND expires_at>clock_timestamp() RETURNING id", auth.Digest(first.Ticket), u.ID, worker.ID).Scan(&sessionID)
-	if e != nil {
-		c.Close(websocket.StatusPolicyViolation, "ticket rejected")
-		return
-	}
-	client, e := s.SSH.Connect(ctx, worker.WorkerConfig)
-	if e != nil {
-		c.Close(websocket.StatusInternalError, "SSH unavailable")
-		return
-	}
-	defer client.Close()
-	session, e := client.NewSession()
-	if e != nil {
-		return
-	}
-	defer session.Close()
-	in, e := session.StdinPipe()
-	if e != nil {
-		return
-	}
-	out, e := session.StdoutPipe()
-	if e != nil {
-		return
-	}
-	if e = session.Start("begom-node-helper console"); e != nil {
-		return
-	}
-	defer func() {
-		qctx, c := context.WithTimeout(context.Background(), time.Second)
-		defer c()
-		s.Store.Mutate(qctx, u.ID, "ssh.close", model.NewID(), []byte(sessionID), func(tx pgx.Tx) (any, int, error) {
-			e := db.Audit(qctx, tx, u.ID, "ssh.session.close", worker.ID, "", map[string]string{"session_id": sessionID})
-			return map[string]bool{"ok": true}, 200, e
-		})
-	}()
-	var writeMu sync.Mutex
-	go func() {
-		buffer := make([]byte, 4096)
-		total := 0
-		for {
-			n, e := out.Read(buffer)
-			if n > 0 {
-				total += n
-				if total > 2<<20 {
-					cancel()
-					return
-				}
-				writeMu.Lock()
-				qctx, stop := context.WithTimeout(ctx, 3*time.Second)
-				we := wsjson.Write(qctx, c, map[string]string{"output": string(buffer[:n])})
-				stop()
-				writeMu.Unlock()
-				if we != nil {
-					cancel()
-					return
-				}
-			}
-			if e != nil {
-				cancel()
-				return
-			}
-		}
-	}()
-	for {
-		var command struct {
-			Command string `json:"command"`
-			ID      string `json:"command_id"`
-		}
-		qctx, stop := context.WithTimeout(ctx, 2*time.Minute)
-		e = wsjson.Read(qctx, c, &command)
-		stop()
-		if e != nil {
-			return
-		}
-		current, e := s.Auth.Authenticate(r, false)
-		if e != nil || !current.Admin() {
-			return
-		}
-		parsed, e := nodecontrol.Parse(command.Command)
-		if e != nil {
-			writeMu.Lock()
-			wsjson.Write(ctx, c, map[string]string{"output": "Команда запрещена\n"})
-			writeMu.Unlock()
-			continue
-		}
-		if !model.ValidID(command.ID) {
-			return
-		}
-		confirmation, err := s.Store.Mutate(ctx, u.ID, "ssh.command:"+sessionID, command.ID, db.JSON(command), func(tx pgx.Tx) (any, int, error) {
-			e := db.Audit(ctx, tx, u.ID, "ssh.command", worker.ID, "", map[string]any{"session_id": sessionID, "command": parsed.Action, "lines": parsed.Lines})
-			return map[string]bool{"accepted": true}, 200, e
-		})
-		if err != nil {
-			return
-		}
-		if confirmation.Replayed {
-			continue
-		}
-		if _, e = io.WriteString(in, strings.TrimSpace(command.Command)+"\n"); e != nil {
-			return
-		}
-	}
 }

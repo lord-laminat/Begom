@@ -3,7 +3,7 @@ export GOMODCACHE ?= /tmp/begom-go-mod
 GO ?= go
 BINS := coordinator agent begomctl mockdonor node-helper
 
-.PHONY: build test vet check integration init up down acceptance fmt-check
+.PHONY: build test vet check integration init up down status logs acceptance fmt-check
 build:
 	@mkdir -p bin
 	@for app in $(BINS); do CGO_ENABLED=0 $(GO) build -trimpath -o bin/$$app ./cmd/$$app || exit; done
@@ -17,10 +17,14 @@ check: fmt-check vet test build
 integration:
 	$(GO) test -race -tags integration ./tests/integration/... -count=1 -timeout=10m
 init:
-	$(GO) run ./cmd/begomctl init --dir .local
+	bash deploy/local-v2.sh init
 up:
-	docker compose up -d --build
+	bash deploy/local-v2.sh up
 down:
-	docker compose down
+	bash deploy/local-v2.sh down
+status:
+	bash deploy/local-v2.sh status
+logs:
+	bash deploy/local-v2.sh logs
 acceptance:
-	$(GO) run ./cmd/begomctl acceptance --config .local/client.json --output artifacts/acceptance
+	BEGOM_SOURCE=mock bash deploy/local-v2.sh acceptance

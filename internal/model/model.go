@@ -1,4 +1,4 @@
-// Package model defines version 1 of the coordinator/agent wire contract.
+// Package model defines version 2 of the coordinator/agent wire contract.
 package model
 
 import (
@@ -14,8 +14,35 @@ import (
 	"time"
 )
 
-const Version = "1.0.0"
-const APIVersion = "1"
+const Version = "2.0.0"
+const APIVersion = "2"
+
+const Discovery = "discovery"
+const Download = "download"
+
+type CreateJob struct {
+	Kind     string    `json:"kind"`
+	Config   JobConfig `json:"config"`
+	MediaIDs []string  `json:"media_ids,omitempty"`
+}
+
+type Target struct {
+	MediaID     string `json:"media_id"`
+	ExternalID  Number `json:"external_id"`
+	CanonicalID string `json:"canonical_id"`
+}
+
+type TerminalSSH struct {
+	Port    int    `json:"port" yaml:"port"`
+	User    string `json:"user" yaml:"user"`
+	HostKey string `json:"host_key" yaml:"host_key"`
+	Secret  string `json:"secret_ref,omitempty" yaml:"secret_ref"`
+}
+
+type Quality struct {
+	Name string `json:"name"`
+	Size Number `json:"size_bytes"`
+}
 
 // Number is transmitted as a decimal string so browsers retain all 64 bits.
 type Number uint64
@@ -238,7 +265,7 @@ var versionPattern = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+(?:-[a-z0-9-]+)?
 func ValidVersion(s string) bool { return len(s) <= 64 && versionPattern.MatchString(s) }
 func Final(s string) bool {
 	switch s {
-	case "completed", "not_found", "skipped", "forbidden", "failed":
+	case "available", "completed", "not_found", "skipped", "forbidden", "failed":
 		return true
 	}
 	return false
@@ -273,6 +300,8 @@ func Transition(from, action string) (string, error) {
 }
 
 type Job struct {
+	Kind                string            `json:"kind"`
+	SelectionCount      uint64            `json:"selection_count"`
 	ID                  string            `json:"job_id"`
 	RunID               string            `json:"run_id"`
 	State               string            `json:"state"`
@@ -318,24 +347,28 @@ type Metrics struct {
 	DiskBPS               float64   `json:"disk_bytes_per_second"`
 }
 type WorkerConfig struct {
-	ID            string  `json:"worker_id" yaml:"worker_id"`
-	Name          string  `json:"name" yaml:"name"`
-	Host          string  `json:"host" yaml:"host"`
-	SSHPort       int     `json:"ssh_port" yaml:"ssh_port"`
-	SSHUser       string  `json:"ssh_user" yaml:"ssh_user"`
-	SSHSecret     string  `json:"ssh_secret_ref,omitempty" yaml:"ssh_secret_ref"`
-	SSHHostKey    string  `json:"ssh_host_key" yaml:"ssh_host_key"`
-	Threads       int     `json:"threads" yaml:"threads"`
-	Enabled       bool    `json:"enabled" yaml:"enabled"`
-	MinFreeBytes  uint64  `json:"min_free_bytes" yaml:"min_free_bytes"`
-	StoragePath   string  `json:"storage_path" yaml:"storage_path"`
-	RPS           float64 `json:"rps" yaml:"rps"`
-	Connections   int     `json:"connections" yaml:"connections"`
-	MaxNetworkBPS uint64  `json:"max_network_bps" yaml:"max_network_bps"`
-	MaxDiskBPS    uint64  `json:"max_disk_bps" yaml:"max_disk_bps"`
+	TerminalSSH   TerminalSSH `json:"terminal_ssh" yaml:"terminal_ssh"`
+	ID            string      `json:"worker_id" yaml:"worker_id"`
+	Name          string      `json:"name" yaml:"name"`
+	Host          string      `json:"host" yaml:"host"`
+	SSHPort       int         `json:"ssh_port" yaml:"ssh_port"`
+	SSHUser       string      `json:"ssh_user" yaml:"ssh_user"`
+	SSHSecret     string      `json:"ssh_secret_ref,omitempty" yaml:"ssh_secret_ref"`
+	SSHHostKey    string      `json:"ssh_host_key" yaml:"ssh_host_key"`
+	Threads       int         `json:"threads" yaml:"threads"`
+	Enabled       bool        `json:"enabled" yaml:"enabled"`
+	MinFreeBytes  uint64      `json:"min_free_bytes" yaml:"min_free_bytes"`
+	StoragePath   string      `json:"storage_path" yaml:"storage_path"`
+	RPS           float64     `json:"rps" yaml:"rps"`
+	Connections   int         `json:"connections" yaml:"connections"`
+	MaxNetworkBPS uint64      `json:"max_network_bps" yaml:"max_network_bps"`
+	MaxDiskBPS    uint64      `json:"max_disk_bps" yaml:"max_disk_bps"`
 }
 
 func (w WorkerConfig) Validate() error {
+	if w.TerminalSSH.User != "" && (w.TerminalSSH.User == "root" || strings.ContainsAny(w.TerminalSSH.User, " /\r\n\x00") || w.TerminalSSH.Port < 1 || w.TerminalSSH.Port > 65535) {
+		return errors.New("invalid terminal SSH profile")
+	}
 	if !ValidID(w.ID) || w.Threads < 1 || w.Threads > 1024 || w.Connections < 0 || w.Connections > 10000 || w.SSHPort < 0 || w.SSHPort > 65535 || math.IsNaN(w.RPS) || math.IsInf(w.RPS, 0) || w.RPS < 0 || w.RPS > 100000 || w.RPS > 0 && w.RPS < .001 {
 		return errors.New("invalid worker configuration")
 	}
@@ -360,6 +393,8 @@ type Register struct {
 	SessionID   string `json:"session_id"`
 }
 type Lease struct {
+	Kind          string    `json:"kind"`
+	Targets       []Target  `json:"targets,omitempty"`
 	JobID         string    `json:"job_id"`
 	RunID         string    `json:"run_id"`
 	ChunkID       string    `json:"chunk_id"`
@@ -413,6 +448,7 @@ type HeartbeatReply struct {
 	Leases     []Renewal    `json:"leases"`
 }
 type Metadata struct {
+	Qualities   []Quality      `json:"qualities,omitempty"`
 	CanonicalID string         `json:"canonical_id"`
 	Title       string         `json:"title"`
 	PageURL     string         `json:"page_url"`

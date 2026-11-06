@@ -18,6 +18,7 @@ import (
 	"math/rand/v2"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -71,6 +72,7 @@ func New(c config.Agent, log *slog.Logger) (*Runner, error) {
 	}
 	a.cap.Store(int64(cap))
 	a.HTTP = NewHTTP(client, c.WorkerID, target.Policy{Source: c.Source})
+	a.HTTP.Log = log
 	return a, nil
 }
 func (a *Runner) Run(ctx context.Context) error {
@@ -296,44 +298,52 @@ func (a *Runner) execute(x *execution) {
 	}
 	var wg sync.WaitGroup
 	failed := atomic.Bool{}
-	if x.lease.NextID != nil {
-		for id := *x.lease.NextID; ; {
-			if x.ctx.Err() != nil || x.pausing.Load() {
-				break
-			}
-			if !confirmed[id] {
-				for {
-					x.mu.Lock()
-					cap := x.config.ThreadsFor(a.Config.WorkerID, int(a.cap.Load()))
-					x.mu.Unlock()
-					if int(x.active.Load()) < cap {
-						break
-					}
-					if x.pausing.Load() || !sleep(x.ctx, 10*time.Millisecond) {
-						break
-					}
-				}
-				if x.ctx.Err() != nil || x.pausing.Load() {
-					break
-				}
-				x.active.Add(1)
-				wg.Add(1)
-				go func(id model.Number) {
-					defer wg.Done()
-					defer x.active.Add(-1)
-					if e := a.process(x, id); e != nil {
-						failed.Store(true)
-						a.errorCount.Add(1)
-						x.cancel()
-						a.Log.Warn("block execution interrupted", "operation", "item.process", "result", "retry", "error_code", "execution_interrupted", "job_id", x.lease.JobID, "external_id", id.String())
-					}
-				}(id)
-			}
-			if id == x.lease.To {
-				break
-			}
-			id++
+	launch := func(id model.Number) bool {
+		if confirmed[id] {
+			return true
 		}
+		for {
+			x.mu.Lock()
+			cap := x.config.ThreadsFor(a.Config.WorkerID, int(a.cap.Load()))
+			x.mu.Unlock()
+			if x.ctx.Err() != nil || x.pausing.Load() {
+				return false
+			}
+			if int(x.active.Load()) < cap {
+				break
+			}
+			if !sleep(x.ctx, 10*time.Millisecond) {
+				return false
+			}
+		}
+		x.active.Add(1)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			defer x.active.Add(-1)
+			if e := a.process(x, id); e != nil {
+				failed.Store(true)
+				a.errorCount.Add(1)
+				x.cancel()
+				a.Log.Warn("block execution interrupted", "operation", "item.process", "result", "retry", "error_code", "execution_interrupted", "job_id", x.lease.JobID, "external_id", id.String())
+			}
+		}()
+		return true
+	}
+	if x.lease.Kind == model.Download {
+		for _, target := range x.lease.Targets {
+			if !launch(target.ExternalID) {
+				break
+			}
+		}
+	} else if x.lease.Kind == model.Discovery && x.lease.NextID != nil {
+		for id := *x.lease.NextID; ; id++ {
+			if !launch(id) || id == x.lease.To {
+				break
+			}
+		}
+	} else {
+		failed.Store(true)
 	}
 	wg.Wait()
 	endpoint := "complete"
@@ -397,6 +407,18 @@ func (a *Runner) process(x *execution, id model.Number) error {
 					_, e = a.report(x, model.ItemResult{ExternalID: id, Status: "failed", ErrorCode: "unsupported_page_schema"})
 					return e
 				}
+				if x.lease.Kind == model.Download {
+					expected := ""
+					for _, target := range x.lease.Targets {
+						if target.ExternalID == id {
+							expected = target.CanonicalID
+							break
+						}
+					}
+					if expected == "" || expected != page.Metadata.CanonicalID {
+						return a.finishError(x, id, "canonical_changed")
+					}
+				}
 				if page.DownloadLink == "" {
 					_, e = a.report(x, model.ItemResult{ExternalID: id, Status: "skipped", ErrorCode: "download_not_allowed", Metadata: &page.Metadata})
 					return e
@@ -452,7 +474,12 @@ func (a *Runner) process(x *execution, id model.Number) error {
 	if assets == nil {
 		return a.finishError(x, id, lastCode)
 	}
-	asset, ok := donor.Best(assets, cfg.MaxFileBytes)
+	maxBytes := cfg.MaxFileBytes
+	if x.lease.Kind == model.Discovery {
+		maxBytes = ^uint64(0)
+	}
+	page.Metadata.Qualities = donor.Qualities(assets)
+	asset, ok := donor.Best(assets, maxBytes)
 	if !ok {
 		_, e = a.report(x, model.ItemResult{ExternalID: id, Status: "skipped", ErrorCode: "no_permitted_video_asset", Metadata: &page.Metadata})
 		return e
@@ -464,6 +491,10 @@ func (a *Runner) process(x *execution, id model.Number) error {
 	page.Metadata.Size = uint64(asset.Size)
 	page.Metadata.MIME = donor.MIME(asset)
 	page.Metadata.Quality = asset.Quality
+	if x.lease.Kind == model.Discovery {
+		_, e = a.report(x, model.ItemResult{ExternalID: id, Status: "available", Metadata: &page.Metadata})
+		return e
+	}
 	downloadID, stageID := model.NewID(), model.NewID()
 	reserve := uint64(asset.Size)
 	if reserve == 0 {
@@ -494,7 +525,7 @@ func (a *Runner) process(x *execution, id model.Number) error {
 			_, e := a.report(x, model.ItemResult{ExternalID: id, Status: "forbidden", ErrorCode: "download_forbidden"})
 			return e
 		}
-		return a.finishError(x, id, "download_failed")
+		return a.finishError(x, id, downloadErrorCode(err))
 	}
 	commit := model.Commit{LeaseRef: x.lease.Ref(), StageID: stageID, Size: size, Checksum: checksum}
 	var publication struct {
@@ -562,4 +593,29 @@ func (a *Runner) Metrics(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4")
 	hostmetrics.Prometheus(w, "begom_host_", "", m)
 	fmt.Fprintf(w, "begom_agent_up 1\nbegom_active_checks %d\nbegom_active_downloads %d\nbegom_download_bytes_total %d\nbegom_agent_errors_total %d\nbegom_agent_cpu_percent %g\nbegom_agent_ram_used_bytes %d\nbegom_agent_disk_free_bytes %d\nbegom_agent_measurement_timestamp_seconds %g\n", m.ActiveChecks, m.ActiveDownloads, m.Bytes, m.Errors, m.CPU, m.RAMUsed, m.DiskFree, float64(m.MeasuredAt.UnixMilli())/1000)
+}
+
+func downloadErrorCode(err error) string {
+	var remote *wire.Error
+	if errors.As(err, &remote) && model.ValidID(remote.API.Code) {
+		return remote.API.Code
+	}
+	if errors.Is(err, os.ErrPermission) {
+		return "storage_permission_denied"
+	}
+	code := err.Error()
+	if strings.HasPrefix(code, "donor_") && model.ValidID(code) {
+		return code
+	}
+	switch code {
+	case "file_size_limit", "invalid_video_mime", "unexpected_download_status", "download_retry_exhausted", "incomplete_download", "storage_write_failed", "donor_request_failed", "permit_expired", "too_many_redirects", "invalid_redirect":
+		return code
+	case "donor host not allowed":
+		return "download_redirect_host_not_allowed"
+	case "donor address not allowed":
+		return "download_address_not_allowed"
+	case "donor DNS resolution failed":
+		return "download_dns_failed"
+	}
+	return "download_failed"
 }

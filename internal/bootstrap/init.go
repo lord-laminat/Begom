@@ -162,6 +162,17 @@ func InitSource(dir, donor string) error {
 	if donor == "kinescope" {
 		source = config.Source{ID: "kinescope", PageTemplate: "https://kinescope.io/{id}", AllowedHosts: []string{"kinescope.io", "*.kinescope.io", "*.kinescopecdn.net"}, Limits: model.Limits{RPS: 1, WorkerRPS: 1, CheckRPS: 1, DownloadRPS: 1, Connections: 4, WorkerConnections: 2}}
 	}
+	if subnet := os.Getenv("BEGOM_CONTROL_SUBNET"); subnet != "" && source.Mock {
+		source.MockCIDRs = []string{subnet}
+	}
+	origin := os.Getenv("BEGOM_PUBLIC_ORIGIN")
+	if origin == "" {
+		origin = "https://localhost:8443"
+	}
+	mockPort := os.Getenv("BEGOM_MOCK_PORT")
+	if mockPort == "" {
+		mockPort = "8090"
+	}
 	volume := config.Storage{Root: "/data", MountPath: "/data", VolumeID: profile.VolumeID, Mode: "local", MinFreeBytes: 32 << 20}
 	bao := config.Bao{URL: "https://openbao:8200", CA: "/run/secrets/ca.crt", RoleIDFile: "/run/secrets/role-id", SecretIDFile: "/run/secrets/secret-id", Prefix: "begom/coordinator"}
 	workers := []model.WorkerConfig{}
@@ -180,7 +191,23 @@ func InitSource(dir, donor string) error {
 				return e
 			}
 		}
-		workers = append(workers, model.WorkerConfig{ID: id, Name: "Рабочий сервер " + strconv.Itoa(i), Host: id, SSHPort: 2222, SSHUser: "begom-admin", SSHHostKey: string(hostPub), SSHSecret: "begom/coordinator/ssh/" + id, Threads: 40, Enabled: true, MinFreeBytes: 32 << 20, Connections: 40, RPS: 40, StoragePath: volume.Root})
+		terminalHost, terminalHostPub, e := pki.SSH()
+		if e != nil {
+			return e
+		}
+		terminalKey, terminalPub, e := pki.SSH()
+		if e != nil {
+			return e
+		}
+		for file, data := range map[string][]byte{filepath.Join("secrets", id+"-terminal-host.key"): terminalHost, filepath.Join("secrets", id+"-terminal-client.pub"): terminalPub, filepath.Join("bootstrap", id+"-terminal-client.key"): terminalKey} {
+			if e = write(filepath.Join(abs, file), data, 0600); e != nil {
+				return e
+			}
+		}
+		if e = os.MkdirAll(filepath.Join(abs, "terminal", id), 0700); e != nil {
+			return e
+		}
+		workers = append(workers, model.WorkerConfig{TerminalSSH: model.TerminalSSH{Port: 2223, User: "begom-shell", HostKey: string(terminalHostPub), Secret: "begom/coordinator/terminal/" + id}, ID: id, Name: "Рабочий сервер " + strconv.Itoa(i), Host: id, SSHPort: 2222, SSHUser: "begom-admin", SSHHostKey: string(hostPub), SSHSecret: "begom/coordinator/ssh/" + id, Threads: 40, Enabled: true, MinFreeBytes: 32 << 20, Connections: 40, RPS: 40, StoragePath: volume.Root})
 		if e = os.MkdirAll(filepath.Join(abs, "updates", id), 0750); e != nil {
 			return e
 		}
@@ -196,11 +223,11 @@ func InitSource(dir, donor string) error {
 			return e
 		}
 	}
-	c := config.Coordinator{Listen: ":8080", AgentListen: ":8444", PublicOrigin: "https://localhost:8443", AgentTLS: config.TLS{CA: "/run/secrets/ca.crt"}, Storage: volume, Source: source, Bao: bao, HeartbeatMS: 2000, LeaseMS: 10000, SweepMS: 1000, Workers: workers, BootstrapUser: "admin", NodePackageDir: "/packages"}
+	c := config.Coordinator{Listen: ":8080", AgentListen: ":8444", PublicOrigin: origin, AgentTLS: config.TLS{CA: "/run/secrets/ca.crt"}, Storage: volume, Source: source, Bao: bao, HeartbeatMS: 2000, LeaseMS: 10000, SweepMS: 1000, Workers: workers, BootstrapUser: "admin", NodePackageDir: "/packages"}
 	if e = jsonFile(filepath.Join(abs, "config/coordinator.json"), c); e != nil {
 		return e
 	}
-	if e = jsonFile(filepath.Join(abs, "client.json"), config.Client{URL: "https://localhost:8443", CA: filepath.Join(abs, "secrets/ca.crt"), Username: "admin", PasswordFile: filepath.Join(abs, "client-password"), MockURL: "http://127.0.0.1:8090", MockTokenFile: filepath.Join(abs, "mock-token")}); e != nil {
+	if e = jsonFile(filepath.Join(abs, "client.json"), config.Client{URL: origin, CA: filepath.Join(abs, "secrets/ca.crt"), Username: "admin", PasswordFile: filepath.Join(abs, "client-password"), MockURL: "http://127.0.0.1:" + mockPort, MockTokenFile: filepath.Join(abs, "mock-token")}); e != nil {
 		return e
 	}
 	dsn := fmt.Sprintf("postgres://begom:%s@postgres:5432/begom?sslmode=verify-full&sslrootcert=/run/secrets/ca.crt", appPassword)
@@ -246,6 +273,9 @@ func Permissions(dir string) error {
 		if name == "postgres-password" || strings.HasSuffix(name, "-db-password") {
 			uid, gid, mode = 999, 999, 0400
 		}
+		if strings.HasSuffix(name, "-terminal-host.key") {
+			uid, gid, mode = 10050, 10050, 0400
+		}
 		if name == "web.key" {
 			uid, gid, mode = 0, 0, 0400
 		}
@@ -255,10 +285,28 @@ func Permissions(dir string) error {
 		if name == "grafana-password" {
 			uid, gid, mode = 472, 472, 0400
 		}
+		if strings.HasSuffix(name, "-terminal-client.pub") {
+			uid, gid = 0, 0
+		}
 		if filepath.Ext(name) == ".crt" || filepath.Ext(name) == ".pub" {
 			mode = 0444
 		}
 		path := filepath.Join(dir, "secrets", name)
+		if strings.HasSuffix(name, "-terminal-host.key") || strings.HasSuffix(name, "-ssh-host.key") {
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			converted, err := pki.OpenSSHPrivate(data)
+			if err != nil {
+				return errors.New("invalid SSH host key")
+			}
+			if string(converted) != string(data) {
+				if err = os.WriteFile(path, converted, 0600); err != nil {
+					return err
+				}
+			}
+		}
 		if e = os.Chown(path, uid, gid); e != nil {
 			return e
 		}
@@ -287,6 +335,15 @@ func Permissions(dir string) error {
 			if e = os.Chown(p, uid, uid); e != nil {
 				return e
 			}
+		}
+	}
+	for i := 1; i <= 3; i++ {
+		home := filepath.Join(dir, "terminal", "worker-"+strconv.Itoa(i))
+		if e = os.Chown(home, 10050, 10050); e != nil {
+			return e
+		}
+		if e = os.Chmod(home, 0700); e != nil {
+			return e
 		}
 	}
 	for i := 1; i <= 3; i++ {

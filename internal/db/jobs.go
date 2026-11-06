@@ -7,16 +7,72 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/rychkin/Begom/internal/model"
 	"math"
+	"sort"
 	"time"
 )
 
 func (s *Store) CreateJob(ctx context.Context, tx pgx.Tx, actor, request string, c model.JobConfig) (any, int, error) {
+	return s.CreateRequestedJob(ctx, tx, actor, request, model.CreateJob{Kind: model.Discovery, Config: c})
+}
+
+func (s *Store) CreateRequestedJob(ctx context.Context, tx pgx.Tx, actor, request string, in model.CreateJob) (any, int, error) {
+	c := in.Config
+	if in.Kind != model.Discovery && in.Kind != model.Download {
+		return nil, 0, Bad("invalid_kind", "Choose discovery or download")
+	}
+	if in.Kind == model.Discovery && len(in.MediaIDs) != 0 {
+		return nil, 0, Bad("invalid_selection", "Discovery takes a range, not media IDs")
+	}
+	if in.Kind == model.Download && (c.RangeText != nil || c.From != nil || c.To != nil || c.Stop.MaxItems != nil || c.Stop.ConsecutiveMissing != 0) {
+		return nil, 0, Bad("invalid_download_range", "Downloads take an immutable media selection, not a numeric range")
+	}
 	r, e := c.Normalize()
 	if e != nil {
 		return nil, 0, Bad("invalid_job", e.Error())
 	}
 	if e = s.RecordQuotaHorizon(ctx, tx, c.Limits); e != nil {
 		return nil, 0, e
+	}
+	var targets []model.Target
+	if in.Kind == model.Download {
+		unique := map[string]bool{}
+		for _, id := range in.MediaIDs {
+			if !model.ValidID(id) {
+				return nil, 0, Bad("invalid_selection", "Invalid media ID")
+			}
+			unique[id] = true
+			if len(unique) > 10000 {
+				return nil, 0, Bad("invalid_selection", "Select 1..10000 unique materials")
+			}
+		}
+		if len(unique) == 0 {
+			return nil, 0, Bad("invalid_selection", "Select 1..10000 unique materials")
+		}
+		rows, err := tx.Query(ctx, `SELECT m.id,min(i.external_id)::text,m.canonical_id FROM media_metadata m JOIN items i ON i.media_id=m.id JOIN media_aliases a ON a.media_id=m.id AND a.source_id=m.source_id AND a.external_id=i.external_id JOIN jobs j ON j.id=i.job_id WHERE m.id=ANY($1) AND m.source_id=$2 AND m.downloadable AND i.status='available' AND j.kind='discovery' AND (EXISTS(SELECT 1 FROM user_roles WHERE user_id=$3 AND role='administrator') OR EXISTS(SELECT 1 FROM job_access access WHERE access.job_id=j.id AND access.user_id=$3)) GROUP BY m.id`, in.MediaIDs, s.SourceID, actor)
+		if err != nil {
+			return nil, 0, err
+		}
+		for rows.Next() {
+			var t model.Target
+			var n string
+			if err = rows.Scan(&t.MediaID, &n, &t.CanonicalID); err != nil {
+				rows.Close()
+				return nil, 0, err
+			}
+			t.ExternalID = Number(n)
+			targets = append(targets, t)
+		}
+		rows.Close()
+		if err = rows.Err(); err != nil {
+			return nil, 0, err
+		}
+		if len(targets) != len(unique) {
+			return nil, 0, Bad("selection_unavailable", "Some selected materials are unavailable or inaccessible")
+		}
+		sort.Slice(targets, func(i, j int) bool { return targets[i].ExternalID < targets[j].ExternalID })
+		r.From = targets[0].ExternalID
+		last := targets[len(targets)-1].ExternalID
+		r.To = &last
 	}
 	id, run := model.NewID(), model.NewID()
 	var to any
@@ -32,7 +88,7 @@ func (s *Store) CreateJob(ctx context.Context, tx pgx.Tx, actor, request string,
 			return nil, 0, Bad("unknown_worker", "Worker is not registered")
 		}
 	}
-	_, e = tx.Exec(ctx, "INSERT INTO jobs(id,owner_id,run_id,state,range_start,range_end,frontier,config) VALUES($1,$2,$3,'created',$4,$5,$4,$6)", id, actor, run, r.From.String(), to, JSON(c))
+	_, e = tx.Exec(ctx, "INSERT INTO jobs(id,owner_id,run_id,state,range_start,range_end,frontier,config,kind) VALUES($1,$2,$3,'created',$4,$5,$4,$6,$7)", id, actor, run, r.From.String(), to, JSON(c), in.Kind)
 	if e != nil {
 		return nil, 0, e
 	}
@@ -44,8 +100,13 @@ func (s *Store) CreateJob(ctx context.Context, tx pgx.Tx, actor, request string,
 			return nil, 0, e
 		}
 	}
+	for _, target := range targets {
+		if _, e = tx.Exec(ctx, "INSERT INTO job_targets(job_id,media_id,external_id,canonical_id) VALUES($1,$2,$3,$4)", id, target.MediaID, target.ExternalID.String(), target.CanonicalID); e != nil {
+			return nil, 0, e
+		}
+	}
 	e = Audit(ctx, tx, actor, "job.create", id, request, map[string]any{"range": r})
-	return map[string]any{"job_id": id, "run_id": run, "config_version": 1, "state": "created", "range": r, "config": c}, 201, e
+	return map[string]any{"job_id": id, "run_id": run, "config_version": 1, "state": "created", "kind": in.Kind, "selection_count": len(targets), "range": r, "config": c}, 201, e
 }
 func (s *Store) Act(ctx context.Context, tx pgx.Tx, actor, request, id, action string) (any, int, error) {
 	var state, run string
@@ -108,11 +169,15 @@ func (s *Store) UpdateConfig(ctx context.Context, tx pgx.Tx, actor, request, id 
 	var old model.JobConfig
 	var b []byte
 	var version int64
-	if e := tx.QueryRow(ctx, "SELECT config,config_version FROM jobs WHERE id=$1 FOR UPDATE", id).Scan(&b, &version); e != nil {
+	var kind string
+	if e := tx.QueryRow(ctx, "SELECT config,config_version,kind FROM jobs WHERE id=$1 FOR UPDATE", id).Scan(&b, &version, &kind); e != nil {
 		return nil, 0, e
 	}
 	if e := json.Unmarshal(b, &old); e != nil {
 		return nil, 0, e
+	}
+	if kind == model.Download && (c.RangeText != nil || c.From != nil || c.To != nil || c.Stop.MaxItems != nil || c.Stop.ConsecutiveMissing != 0) {
+		return nil, 0, Bad("invalid_download_range", "Download selection cannot change")
 	}
 	// Full replacement of hot parameters; the original range cannot change.
 	c.RangeText = old.RangeText
@@ -158,7 +223,7 @@ func (s *Store) GetJob(ctx context.Context, id string) (model.Job, error) {
 	var end, next *string
 	var b []byte
 	var started *time.Time
-	e := s.Pool.QueryRow(ctx, "SELECT id,run_id,state,range_start::text,range_end::text,config,config_version,reason,created_at,updated_at,frontier::text,started_at FROM jobs WHERE id=$1", id).Scan(&j.ID, &j.RunID, &j.State, &start, &end, &b, &j.ConfigVersion, &j.Reason, &j.CreatedAt, &j.UpdatedAt, &next, &started)
+	e := s.Pool.QueryRow(ctx, "SELECT kind,id,run_id,state,range_start::text,range_end::text,config,config_version,reason,created_at,updated_at,frontier::text,started_at FROM jobs WHERE id=$1", id).Scan(&j.Kind, &j.ID, &j.RunID, &j.State, &start, &end, &b, &j.ConfigVersion, &j.Reason, &j.CreatedAt, &j.UpdatedAt, &next, &started)
 	if e != nil {
 		return j, e
 	}
@@ -172,6 +237,9 @@ func (s *Store) GetJob(ctx context.Context, id string) (model.Job, error) {
 		j.NextID = &n
 	}
 	if e = json.Unmarshal(b, &j.Config); e != nil {
+		return j, e
+	}
+	if e = s.Pool.QueryRow(ctx, "SELECT count(*) FROM job_targets WHERE job_id=$1", id).Scan(&j.SelectionCount); e != nil {
 		return j, e
 	}
 	j.Counts = map[string]uint64{}
@@ -222,6 +290,9 @@ func (s *Store) GetJob(ctx context.Context, id string) (model.Job, error) {
 	}
 	if j.Range.To != nil && j.Rate > 0 {
 		total := float64(uint64(*j.Range.To)-uint64(j.Range.From)) + 1
+		if j.Kind == model.Download {
+			total = float64(j.SelectionCount)
+		}
 		eta := math.Max(0, (total-float64(count))/j.Rate)
 		j.ETASeconds = &eta
 	}

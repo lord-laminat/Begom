@@ -102,7 +102,7 @@ func run(args []string) error {
 		return bootstrap.Package(agent, key, out, version)
 	case "health":
 		return health(args[1:])
-	case "jobs", "workers":
+	case "jobs", "workers", "catalog":
 		return clientCommand(ctx, args)
 	default:
 		return extraCommand(ctx, args)
@@ -139,10 +139,15 @@ func clientCommand(ctx context.Context, args []string) error {
 	threads, block, retries := 8, uint64(1000), 4
 	rps := 0.0
 	rangeSet := false
+	mediaIDs, query, after, discoveryJob := "", "", "", ""
 	f := flag.NewFlagSet(group+" "+action, flag.ContinueOnError)
 	f.StringVar(&file, "config", file, "client profile")
 	f.StringVar(&id, "id", id, "job or worker ID")
 	f.StringVar(&input, "file", input, "request JSON file")
+	f.StringVar(&mediaIDs, "media-ids", "", "comma-separated catalog media IDs")
+	f.StringVar(&query, "query", "", "catalog title or identifier search")
+	f.StringVar(&after, "after", "", "catalog cursor")
+	f.StringVar(&discoveryJob, "discovery-job", "", "discovery job filter")
 	f.Func("range", "range expression", func(s string) error { rangeText = s; rangeSet = true; return nil })
 	f.StringVar(&from, "from", from, "first numeric ID")
 	f.StringVar(&to, "to", to, "last numeric ID")
@@ -162,7 +167,12 @@ func clientCommand(ctx context.Context, args []string) error {
 	}
 	method, p := "GET", "/api/"+group
 	var body any
-	if group == "jobs" {
+	if group == "catalog" {
+		if action != "list" {
+			return errors.New("catalog action: list")
+		}
+		p += "?" + url.Values{"q": {query}, "after": {after}, "discovery_job_id": {discoveryJob}}.Encode()
+	} else if group == "jobs" {
 		switch action {
 		case "list":
 		case "show", "items", "events":
@@ -173,7 +183,7 @@ func clientCommand(ctx context.Context, args []string) error {
 			if action != "show" {
 				p += "/" + action
 			}
-		case "create":
+		case "discover", "download":
 			var cfg model.JobConfig
 			if input != "" {
 				if e = config.Read(input, &cfg); e != nil {
@@ -206,7 +216,14 @@ func clientCommand(ctx context.Context, args []string) error {
 				return e
 			}
 			method = "POST"
-			body = cfg
+			request := model.CreateJob{Kind: model.Discovery, Config: cfg}
+			if action == "download" {
+				request.Kind = model.Download
+				if mediaIDs != "" {
+					request.MediaIDs = strings.Split(mediaIDs, ",")
+				}
+			}
+			body = request
 		case "start", "pause", "resume", "stop":
 			if !model.ValidID(id) {
 				return errors.New("valid --id required")

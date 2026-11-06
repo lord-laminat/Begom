@@ -29,7 +29,7 @@ out.mkdir(parents=True, exist_ok=True)
 
 def request(path, method='GET', body=None):
     data = None if body is None else json.dumps(body).encode()
-    headers = {'API-Version': '1', 'Content-Type': 'application/json', 'X-CSRF-Token': csrf, 'Idempotency-Key': secrets.token_hex(16)}
+    headers = {'API-Version': '2', 'Content-Type': 'application/json', 'X-CSRF-Token': csrf, 'Idempotency-Key': secrets.token_hex(16)}
     req = urllib.request.Request(cfg['url']+'/api'+path, data=data, method=method, headers=headers)
     with client.open(req, timeout=8) as response:
         return json.load(response)
@@ -92,7 +92,7 @@ try:
     body = {'range_text': '[4000,6999]', 'worker_ids': nodes, 'threads_default': 40,
             'block_size': 1000, 'retry_policy': {'max_retries': 4}, 'http_timeout_ms': 20000,
             'stop_conditions': {'no_workers_seconds': 180}}
-    job = request('/jobs', 'POST', body)['job_id']
+    job = request('/jobs', 'POST', {'kind': 'discovery', 'config': body})['job_id']
     report['job_id'] = job
     request('/jobs/'+job+'/start', 'POST', {})
     check('load_started', wait(lambda: stats()['active'] >= 40, 30),

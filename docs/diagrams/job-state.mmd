@@ -12,6 +12,6 @@ stateDiagram-v2
   paused --> running: resume; new run_id
   stopped --> running: resume; new run_id
   failed --> validating: resume; new run_id
-  running --> completed: effective range exhausted; no gaps
+  running --> completed: discovery range / download selection exhausted; no gaps
   completed --> stopped: explicit retry of selected failures
   completed --> [*]

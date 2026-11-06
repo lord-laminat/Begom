@@ -18,10 +18,14 @@ import (
 func TestDispatcherConcurrentJournalAndRecovery(t *testing.T) {
 	x := setup(t)
 	x.s.Lease = 30 * time.Second
-	x.job(t, "[0,239]", 80)
+	x.downloadJob(t, "[0,239]", 80, nil)
 	leases := []*model.Lease{}
 	for _, worker := range x.workers {
-		leases = append(leases, x.lease(t, worker))
+		lease := x.lease(t, worker)
+		if lease == nil {
+			t.Fatal("healthy fixture did not receive a lease", worker)
+		}
+		leases = append(leases, lease)
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
 	defer cancel()

@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -186,5 +188,39 @@ func TestContentRange(t *testing.T) {
 		if _, _, _, e := ParseContentRange(s); e == nil {
 			t.Error("accepted", s)
 		}
+	}
+}
+
+func TestDonorTLS13AndCertificateVerification(t *testing.T) {
+	f := setupHTTP(t, func(w http.ResponseWriter, r *http.Request) {})
+	var requests atomic.Int64
+	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests.Add(1)
+
+		io.WriteString(w, "authorized metadata")
+	}))
+	server.EnableHTTP2 = true
+	server.StartTLS()
+	defer server.Close()
+	roots := server.Client().Transport.(*http.Transport).TLSClientConfig.RootCAs
+	f.runner.HTTP.Transport.TLSClientConfig = &tls.Config{RootCAs: roots, MinVersion: tls.VersionTLS13}
+	response, e := f.runner.HTTP.Get(t.Context(), model.LeaseRef{}, "check", server.URL, nil, time.Second)
+	if e != nil {
+		t.Fatal(e)
+	}
+	io.Copy(io.Discard, response.Body)
+	response.Body.Close()
+	if response.TLS.Version != tls.VersionTLS13 || f.permits.Load() != 1 || requests.Load() != 1 {
+		t.Fatal("TLS/permit contract", response.TLS.Version, f.permits.Load(), requests.Load())
+	}
+	transport := f.runner.HTTP.Transport.Clone()
+	transport.TLSClientConfig = transport.TLSClientConfig.Clone()
+	transport.TLSClientConfig.RootCAs = x509.NewCertPool()
+	f.runner.HTTP.Transport = transport
+	if _, e = f.runner.HTTP.Get(t.Context(), model.LeaseRef{}, "check", server.URL, nil, time.Second); e == nil || e.Error() != "donor_certificate_invalid" {
+		t.Fatal("untrusted certificate accepted", e)
+	}
+	if f.permits.Load() != 2 || requests.Load() != 1 {
+		t.Fatal("TLS retry skipped permit or certificate check")
 	}
 }

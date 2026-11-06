@@ -146,6 +146,8 @@
   hosts: control
   become: true
   tasks:
+    - name: Install local media metadata and thumbnail tools
+      ansible.builtin.apt: {name: [ffmpeg], state: present}
     - ansible.builtin.include_tasks: infrastructure.yml
     - name: Initialize secrets from the provisioning controller over verified TLS
       ansible.builtin.command:
@@ -167,9 +169,9 @@
   hosts: agents
   become: true
   tasks:
-    - ansible.builtin.file: {path: '/opt/begom/releases/1.0.0', state: directory, owner: root, mode: '0755'}
-    - ansible.builtin.copy: {src: '{{ begom_binaries }}/agent', dest: '/opt/begom/releases/1.0.0/agent', mode: '0755'}
-    - ansible.builtin.file: {src: /opt/begom/releases/1.0.0, dest: /opt/begom/current, state: link, force: false}
+    - ansible.builtin.file: {path: '/opt/begom/releases/2.0.0', state: directory, owner: root, mode: '0755'}
+    - ansible.builtin.copy: {src: '{{ begom_binaries }}/agent', dest: '/opt/begom/releases/2.0.0/agent', mode: '0755'}
+    - ansible.builtin.file: {src: /opt/begom/releases/2.0.0, dest: /opt/begom/current, state: link, force: false}
     - ansible.builtin.copy: {src: '{{ begom_binaries }}/node-helper', dest: /usr/local/libexec/begom-node-helper, mode: '0755'}
     - ansible.builtin.copy: {src: '{{ begom_bundle }}/secrets/package.pub', dest: /etc/begom/package.pub, mode: '0444'}
     - ansible.builtin.copy: {src: '{{ begom_bundle }}/config/{{ inventory_hostname }}.json', dest: /etc/begom/agent.json, owner: 'begom-{{ inventory_hostname }}', mode: '0400'}
@@ -209,6 +211,47 @@
           [Install]
           WantedBy=multi-user.target
     - ansible.builtin.systemd_service: {name: begom-sshd, daemon_reload: true, enabled: true, state: started}
+    - ansible.builtin.apt: {name: [bash, procps, nano], state: present}
+    - ansible.builtin.group: {name: begom-shell, gid: 10050}
+    - ansible.builtin.user: {name: begom-shell, group: begom-shell, uid: 10050, shell: /bin/bash, create_home: true, password: '*', groups: '', append: false}
+    - ansible.builtin.file: {path: /home/begom-shell, owner: begom-shell, group: begom-shell, mode: '0700'}
+    - ansible.builtin.copy:
+        src: '{{ begom_bundle }}/secrets/{{ inventory_hostname }}-terminal-host.key'
+        dest: /etc/begom/terminal-host.key
+        owner: begom-shell
+        mode: '0600'
+      no_log: true
+    - ansible.builtin.copy:
+        src: '{{ begom_bundle }}/secrets/{{ inventory_hostname }}-terminal-client.pub'
+        dest: /etc/begom/terminal-client.pub
+        owner: root
+        mode: '0644'
+    - ansible.builtin.copy:
+        dest: /etc/begom/terminal-sshd.conf
+        mode: '0644'
+        content: '{{ lookup("ansible.builtin.file", "../ssh/terminal-sshd.conf") | replace("/run/secrets/terminal", "/etc/begom/terminal") }}'
+    - ansible.builtin.command: {argv: [sshd, -t, -f, /etc/begom/terminal-sshd.conf]}
+      changed_when: false
+    - ansible.builtin.copy:
+        dest: /etc/systemd/system/begom-terminal.service
+        mode: '0644'
+        content: |
+          [Unit]
+          Description=Begom interactive SSH terminal
+          After=network.target
+          [Service]
+          User=begom-shell
+          Group=begom-shell
+          RuntimeDirectory=begom-terminal
+          NoNewPrivileges=true
+          CapabilityBoundingSet=
+          ExecStartPre=/usr/sbin/sshd -t -f /etc/begom/terminal-sshd.conf
+          ExecStart=/usr/sbin/sshd -D -e -f /etc/begom/terminal-sshd.conf
+          Restart=on-failure
+          [Install]
+          WantedBy=multi-user.target
+    - ansible.builtin.systemd_service: {name: begom-terminal, daemon_reload: true, enabled: true, state: started}
+
     - ansible.builtin.template: {src: begom-agent.service.j2, dest: /etc/systemd/system/begom-agent.service, mode: '0644'}
     - ansible.builtin.systemd_service: {name: begom-agent, daemon_reload: true, enabled: true, state: started}
 
