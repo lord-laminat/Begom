@@ -1,0 +1,2 @@
+Defaults:begom-admin !requiretty
+begom-admin ALL=(root) NOPASSWD: /usr/local/libexec/begom-node-helper privileged start, /usr/local/libexec/begom-node-helper privileged stop, /usr/local/libexec/begom-node-helper privileged restart, /usr/local/libexec/begom-node-helper privileged install

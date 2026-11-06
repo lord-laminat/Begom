@@ -1,0 +1,30 @@
+[Unit]
+Description=Begom authorized video agent
+Wants=network-online.target
+After=network-online.target remote-fs.target begom-tickets.service
+RequiresMountsFor=/srv/begom
+BindsTo=srv-begom.mount
+[Service]
+User=begom-{{ inventory_hostname }}
+Group=begom-{{ inventory_hostname }}
+Environment=KRB5CCNAME=FILE:/run/begom-ccaches/{{ begom_uid }}/krb5cc_{{ begom_uid }}
+ExecStartPre=/usr/bin/mountpoint -q /srv/begom
+ExecStart=/opt/begom/current/agent --config /etc/begom/agent.json
+Restart=on-failure
+RestartSec=2s
+UMask=0027
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateDevices=true
+ReadWritePaths=/srv/begom/staging/{{ inventory_hostname }} /run/begom-ccaches
+ReadOnlyPaths=/etc/begom /opt/begom
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+CapabilityBoundingSet=
+MemoryMax=512M
+CPUQuota=200%
+TasksMax=256
+LimitNOFILE=4096
+TimeoutStopSec=15s
+[Install]
+WantedBy=multi-user.target

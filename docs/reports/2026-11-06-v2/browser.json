@@ -1,0 +1,285 @@
+{
+  "profile": "mock-browser",
+  "started_at": "2026-11-06T08:45:19.726357+00:00",
+  "checks": [
+    {
+      "name": "mock_only",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "three_registered_agents",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "grafana_home_redirect",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "grafana_home_is_begom",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "grafana_dashboard_visible",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "grafana_prometheus_worker_metrics",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "grafana_loki_logs",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "metrics_collect_to_render",
+      "status": "passed",
+      "observed": {
+        "max_ms": 2240,
+        "samples": 150
+      }
+    },
+    {
+      "name": "wss_reconnect_and_http_refresh",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "responsive_width",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "terminal_real_unprivileged_PTY",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "terminal_resize",
+      "status": "passed",
+      "observed": {
+        "rows": 42,
+        "cols": 131
+      }
+    },
+    {
+      "name": "terminal_ctrl_c",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "terminal_history_and_autocomplete",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "terminal_editor_and_no_sudo_or_agent_secrets",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "terminal_backpressure_over_two_MiB",
+      "status": "passed",
+      "observed": {
+        "output_bytes": 3145728
+      }
+    },
+    {
+      "name": "uint64_browser_precision",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "controlled_XSS_fixture",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "metadata_XSS_escaped",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "parsing_finishes_without_files",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "forbidden_download_excluded_from_catalog",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "catalog_selection_survives_pagination",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "browser_creates_immutable_cross_discovery_selection",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "published_video_for_client",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "gallery_filter_sort_and_cursor",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "thumbnail_and_duration_generated",
+      "status": "passed",
+      "observed": "ready"
+    },
+    {
+      "name": "published_JPEG_preview",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "watch_player_metadata_loaded",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "gallery_search_deep_links_and_video_playback",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "gallery_responsive_width",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "changed_donor_fixture_7782",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "revalidation_download_not_allowed",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "withdraw_unavailable_catalog_7782",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "changed_donor_fixture_7784",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "revalidation_canonical_changed",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "withdraw_unavailable_catalog_7784",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "canonical_replacement_discovered_without_losing_history",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "csrf_rejected",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "viewer_login",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "acl_hides_unassigned_job",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "audit_administrator_only",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "video_acl_hides_unassigned_file",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "gallery_ACL_hides_files_and_previews",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "viewer_direct_watch_link",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "viewer_downloads_published_video",
+      "status": "passed",
+      "observed": {
+        "bytes": 11501,
+        "filename": "begom-7778.mp4"
+      }
+    },
+    {
+      "name": "viewer_video_range",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "video_requires_login",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "grafana_administrator_only",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "acl_grants_view",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "viewer_cannot_manage",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "private_path__published",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "private_path_data",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "javascript_errors",
+      "status": "passed",
+      "observed": []
+    }
+  ],
+  "browser": "153.0.8010.47",
+  "status": "passed",
+  "finished_at": "2026-11-06T08:46:22.529337+00:00"
+}

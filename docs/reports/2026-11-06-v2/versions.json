@@ -1,0 +1,259 @@
+{
+  "recorded_at": "2026-11-06T08:50:52.411476+00:00",
+  "go": "go version go1.26.7 linux/amd64",
+  "kernel": "Linux 6.18.52",
+  "docker_engine": "29.8.0",
+  "compose": "5.4.0",
+  "python": "Python 3.13.15",
+  "containers": [
+    {
+      "name": "/begom-v2-kinescope-worker-1-1",
+      "image": "begom-worker:2.0.0",
+      "image_id": "sha256:784dfe5b603fcf047135969285eccfe73cf7dd1132d71b98c9a22d6ef2fd46ec",
+      "state": "running",
+      "health": "healthy",
+      "created_at": "2026-11-06T08:25:51.076979577Z"
+    },
+    {
+      "name": "/begom-v2-kinescope-worker-3-1",
+      "image": "begom-worker:2.0.0",
+      "image_id": "sha256:784dfe5b603fcf047135969285eccfe73cf7dd1132d71b98c9a22d6ef2fd46ec",
+      "state": "running",
+      "health": "healthy",
+      "created_at": "2026-11-06T08:25:51.07673242Z"
+    },
+    {
+      "name": "/begom-v2-kinescope-worker-2-1",
+      "image": "begom-worker:2.0.0",
+      "image_id": "sha256:784dfe5b603fcf047135969285eccfe73cf7dd1132d71b98c9a22d6ef2fd46ec",
+      "state": "running",
+      "health": "healthy",
+      "created_at": "2026-11-06T08:25:51.076231151Z"
+    },
+    {
+      "name": "/begom-v2-kinescope-coordinator-1",
+      "image": "begom-app:2.0.0",
+      "image_id": "sha256:000587820953a97fc2902c6f8177bf7401d09cd86ce3e90a338a73e05ba5526e",
+      "state": "running",
+      "health": "healthy",
+      "created_at": "2026-11-06T08:25:50.198513371Z"
+    },
+    {
+      "name": "/begom-v2-kinescope-permissions-1",
+      "image": "begom-app:2.0.0",
+      "image_id": "sha256:000587820953a97fc2902c6f8177bf7401d09cd86ce3e90a338a73e05ba5526e",
+      "state": "exited",
+      "health": "",
+      "created_at": "2026-11-06T08:25:49.960616431Z"
+    },
+    {
+      "name": "/begom-v2-kinescope-bootstrap-1",
+      "image": "begom-app:2.0.0",
+      "image_id": "sha256:000587820953a97fc2902c6f8177bf7401d09cd86ce3e90a338a73e05ba5526e",
+      "state": "exited",
+      "health": "",
+      "created_at": "2026-11-06T08:25:49.79671009Z"
+    },
+    {
+      "name": "/begom-v2-mock-worker-1-1",
+      "image": "begom-worker:2.0.0",
+      "image_id": "sha256:393807c8a2177ee701043d11467399f0286ee51809e2fcf35c40c4999d9e6d55",
+      "state": "running",
+      "health": "healthy",
+      "created_at": "2026-11-06T07:56:35.847509848Z"
+    },
+    {
+      "name": "/begom-v2-mock-worker-3-1",
+      "image": "begom-worker:2.0.0",
+      "image_id": "sha256:393807c8a2177ee701043d11467399f0286ee51809e2fcf35c40c4999d9e6d55",
+      "state": "running",
+      "health": "healthy",
+      "created_at": "2026-11-06T07:56:35.846782026Z"
+    },
+    {
+      "name": "/begom-v2-mock-worker-2-1",
+      "image": "begom-worker:2.0.0",
+      "image_id": "sha256:393807c8a2177ee701043d11467399f0286ee51809e2fcf35c40c4999d9e6d55",
+      "state": "running",
+      "health": "healthy",
+      "created_at": "2026-11-06T07:56:35.845605206Z"
+    },
+    {
+      "name": "/begom-v2-mock-coordinator-1",
+      "image": "begom-app:2.0.0",
+      "image_id": "sha256:428a071bb0be539aef140a20f796aaaf613c44e98baee0a6b825ef359fce24dd",
+      "state": "running",
+      "health": "healthy",
+      "created_at": "2026-11-06T07:56:35.100178327Z"
+    },
+    {
+      "name": "/begom-v2-mock-postgres-1",
+      "image": "begom-postgres:18.6",
+      "image_id": "sha256:d325d9dbf0e8760a5715f916fe0dda3cf8cb300c57c9018ab1673468900d702c",
+      "state": "running",
+      "health": "healthy",
+      "created_at": "2026-11-06T07:56:34.492895638Z"
+    },
+    {
+      "name": "/begom-v2-mock-mockdonor-1",
+      "image": "begom-app:2.0.0",
+      "image_id": "sha256:428a071bb0be539aef140a20f796aaaf613c44e98baee0a6b825ef359fce24dd",
+      "state": "running",
+      "health": "",
+      "created_at": "2026-11-06T07:56:34.048884931Z"
+    },
+    {
+      "name": "/begom-v2-mock-permissions-1",
+      "image": "begom-app:2.0.0",
+      "image_id": "sha256:428a071bb0be539aef140a20f796aaaf613c44e98baee0a6b825ef359fce24dd",
+      "state": "exited",
+      "health": "",
+      "created_at": "2026-11-06T07:56:33.827557353Z"
+    },
+    {
+      "name": "/begom-v2-mock-bootstrap-1",
+      "image": "begom-app:2.0.0",
+      "image_id": "sha256:428a071bb0be539aef140a20f796aaaf613c44e98baee0a6b825ef359fce24dd",
+      "state": "exited",
+      "health": "",
+      "created_at": "2026-11-06T07:56:33.633650045Z"
+    },
+    {
+      "name": "/begom-v2-kinescope-postgres-1",
+      "image": "begom-postgres:18.6",
+      "image_id": "sha256:e703f1ca531a22be5e13d2ac543aa9ab00184196861dbd0a20de96e6e962e689",
+      "state": "running",
+      "health": "healthy",
+      "created_at": "2026-11-06T07:47:51.367880622Z"
+    },
+    {
+      "name": "/begom-v2-mock-nginx-exporter-1",
+      "image": "nginx/nginx-prometheus-exporter:1.5.3@sha256:85666e7fde7e253f1c6d978f9a961245df4c9cdb7677e1866d9bb28e8f9ee41d",
+      "image_id": "sha256:85666e7fde7e253f1c6d978f9a961245df4c9cdb7677e1866d9bb28e8f9ee41d",
+      "state": "running",
+      "health": "",
+      "created_at": "2026-11-06T07:13:43.340341075Z"
+    },
+    {
+      "name": "/begom-v2-mock-nginx-1",
+      "image": "begom-nginx:1.30.6",
+      "image_id": "sha256:4508990214c3ae6c67382b2b057dac6ded7a40f1bddc906f6cc0139742820743",
+      "state": "running",
+      "health": "",
+      "created_at": "2026-11-06T07:13:43.169100804Z"
+    },
+    {
+      "name": "/begom-v2-mock-postgres-exporter-1",
+      "image": "quay.io/prometheuscommunity/postgres-exporter:v0.20.1@sha256:ac5ec343104fae0e2d84a27bb8d69b38430a11910c5382cad85d478d2bab713e",
+      "image_id": "sha256:ac5ec343104fae0e2d84a27bb8d69b38430a11910c5382cad85d478d2bab713e",
+      "state": "running",
+      "health": "",
+      "created_at": "2026-11-06T07:13:42.983553615Z"
+    },
+    {
+      "name": "/begom-v2-mock-openbao-1",
+      "image": "quay.io/openbao/openbao:2.7.1@sha256:6d2b93856e3fcf7b18ad855a0b51eaba474dc8b79cf554379ea32034797d2acf",
+      "image_id": "sha256:6d2b93856e3fcf7b18ad855a0b51eaba474dc8b79cf554379ea32034797d2acf",
+      "state": "running",
+      "health": "",
+      "created_at": "2026-11-06T07:13:42.727641089Z"
+    },
+    {
+      "name": "/begom-v2-mock-loki-1",
+      "image": "grafana/loki:3.7.9@sha256:0db216b630ae1f348a1584c67f3cead8b4c1fc839169a39501db664744158e28",
+      "image_id": "sha256:0db216b630ae1f348a1584c67f3cead8b4c1fc839169a39501db664744158e28",
+      "state": "running",
+      "health": "",
+      "created_at": "2026-11-06T07:13:42.724942443Z"
+    },
+    {
+      "name": "/begom-v2-mock-prometheus-1",
+      "image": "prom/prometheus:v3.15.1@sha256:fa3302279710be2f21a8301ec17a8b4f2301fd829bd113839b3b6b02b6f191a2",
+      "image_id": "sha256:fa3302279710be2f21a8301ec17a8b4f2301fd829bd113839b3b6b02b6f191a2",
+      "state": "running",
+      "health": "",
+      "created_at": "2026-11-06T07:13:42.71213604Z"
+    },
+    {
+      "name": "/begom-v2-mock-grafana-1",
+      "image": "grafana/grafana:13.2.4@sha256:dbbc38ea21103cefb50396340cd88afec779c7e070b0a7bf5a75b4ce46651d3f",
+      "image_id": "sha256:dbbc38ea21103cefb50396340cd88afec779c7e070b0a7bf5a75b4ce46651d3f",
+      "state": "running",
+      "health": "",
+      "created_at": "2026-11-06T07:13:42.710600071Z"
+    },
+    {
+      "name": "/begom-v2-mock-fluent-bit-1",
+      "image": "cr.fluentbit.io/fluent/fluent-bit:5.1.5@sha256:2740f387f6e68fab66d28e4fa6a853387b9cab6ffb4cb78958f69bba4eb0e7b4",
+      "image_id": "sha256:2740f387f6e68fab66d28e4fa6a853387b9cab6ffb4cb78958f69bba4eb0e7b4",
+      "state": "running",
+      "health": "",
+      "created_at": "2026-11-06T07:13:42.704828288Z"
+    },
+    {
+      "name": "/begom-v2-kinescope-nginx-exporter-1",
+      "image": "nginx/nginx-prometheus-exporter:1.5.3@sha256:85666e7fde7e253f1c6d978f9a961245df4c9cdb7677e1866d9bb28e8f9ee41d",
+      "image_id": "sha256:85666e7fde7e253f1c6d978f9a961245df4c9cdb7677e1866d9bb28e8f9ee41d",
+      "state": "running",
+      "health": "",
+      "created_at": "2026-11-06T07:07:46.023318756Z"
+    },
+    {
+      "name": "/begom-v2-kinescope-nginx-1",
+      "image": "begom-nginx:1.30.6",
+      "image_id": "sha256:117032acce651bcd03bd105934bd7f13a1c3d2a11898c8aae36414ec755906b5",
+      "state": "running",
+      "health": "",
+      "created_at": "2026-11-06T07:07:45.839450832Z"
+    },
+    {
+      "name": "/begom-v2-kinescope-postgres-exporter-1",
+      "image": "quay.io/prometheuscommunity/postgres-exporter:v0.20.1@sha256:ac5ec343104fae0e2d84a27bb8d69b38430a11910c5382cad85d478d2bab713e",
+      "image_id": "sha256:ac5ec343104fae0e2d84a27bb8d69b38430a11910c5382cad85d478d2bab713e",
+      "state": "running",
+      "health": "",
+      "created_at": "2026-11-06T07:07:45.632987565Z"
+    },
+    {
+      "name": "/begom-v2-kinescope-openbao-1",
+      "image": "quay.io/openbao/openbao:2.7.1@sha256:6d2b93856e3fcf7b18ad855a0b51eaba474dc8b79cf554379ea32034797d2acf",
+      "image_id": "sha256:6d2b93856e3fcf7b18ad855a0b51eaba474dc8b79cf554379ea32034797d2acf",
+      "state": "running",
+      "health": "",
+      "created_at": "2026-11-06T07:07:45.465188191Z"
+    },
+    {
+      "name": "/begom-v2-kinescope-loki-1",
+      "image": "grafana/loki:3.7.9@sha256:0db216b630ae1f348a1584c67f3cead8b4c1fc839169a39501db664744158e28",
+      "image_id": "sha256:0db216b630ae1f348a1584c67f3cead8b4c1fc839169a39501db664744158e28",
+      "state": "running",
+      "health": "",
+      "created_at": "2026-11-06T07:07:45.464316943Z"
+    },
+    {
+      "name": "/begom-v2-kinescope-prometheus-1",
+      "image": "prom/prometheus:v3.15.1@sha256:fa3302279710be2f21a8301ec17a8b4f2301fd829bd113839b3b6b02b6f191a2",
+      "image_id": "sha256:fa3302279710be2f21a8301ec17a8b4f2301fd829bd113839b3b6b02b6f191a2",
+      "state": "running",
+      "health": "",
+      "created_at": "2026-11-06T07:07:45.453439207Z"
+    },
+    {
+      "name": "/begom-v2-kinescope-grafana-1",
+      "image": "grafana/grafana:13.2.4@sha256:dbbc38ea21103cefb50396340cd88afec779c7e070b0a7bf5a75b4ce46651d3f",
+      "image_id": "sha256:dbbc38ea21103cefb50396340cd88afec779c7e070b0a7bf5a75b4ce46651d3f",
+      "state": "running",
+      "health": "",
+      "created_at": "2026-11-06T07:07:45.452172861Z"
+    },
+    {
+      "name": "/begom-v2-kinescope-fluent-bit-1",
+      "image": "cr.fluentbit.io/fluent/fluent-bit:5.1.5@sha256:2740f387f6e68fab66d28e4fa6a853387b9cab6ffb4cb78958f69bba4eb0e7b4",
+      "image_id": "sha256:2740f387f6e68fab66d28e4fa6a853387b9cab6ffb4cb78958f69bba4eb0e7b4",
+      "state": "running",
+      "health": "",
+      "created_at": "2026-11-06T07:07:44.896646605Z"
+    }
+  ],
+  "note": "Local v2 Compose profiles share a host and disk. Real Kinescope and managed mock results are separate. Old v1 profile excluded."
+}

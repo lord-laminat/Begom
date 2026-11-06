@@ -1,0 +1,62 @@
+[SERVICE]
+    Flush 1
+    Log_Level warn
+    Parsers_File /fluent-bit/etc/parsers.conf
+    storage.path /buffers
+    storage.sync normal
+    storage.backlog.mem_limit 8M
+    HTTP_Server On
+    HTTP_Listen 0.0.0.0
+    HTTP_Port 2020
+[INPUT]
+    Name forward
+    Listen 127.0.0.1
+    Port 24224
+    Mem_Buf_Limit 8M
+    storage.type filesystem
+[INPUT]
+    Name systemd
+    Tag begom
+    Path /var/log/journal
+    Systemd_Filter _SYSTEMD_UNIT=begom-agent.service
+    Systemd_Filter _SYSTEMD_UNIT=begom-coordinator.service
+    Systemd_Filter _SYSTEMD_UNIT=begom-backup.service
+    Read_From_Tail On
+    DB /buffers/journal.db
+    storage.type filesystem
+    Mem_Buf_Limit 8M
+[INPUT]
+    Name tail
+    Tag begom
+    Path /var/log/nginx/access.log
+    DB /buffers/nginx.db
+    storage.type filesystem
+    Mem_Buf_Limit 8M
+[FILTER]
+    Name parser
+    Match begom*
+    Key_Name MESSAGE
+    Parser begom_json
+    Reserve_Data On
+    Preserve_Key Off
+[FILTER]
+    Name parser
+    Match begom*
+    Key_Name log
+    Parser begom_json
+    Reserve_Data On
+    Preserve_Key Off
+[FILTER]
+    Name lua
+    Match begom*
+    script /fluent-bit/etc/enrich.lua
+    call enrich
+[OUTPUT]
+    Name loki
+    Match begom*
+    Host {{ begom_control }}
+    Port 3100
+    Labels component=begom,host={{ inventory_hostname }},service=$component,level=$severity
+    Line_Format json
+    Retry_Limit False
+    storage.total_limit_size 512M

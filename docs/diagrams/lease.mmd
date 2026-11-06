@@ -1,0 +1,35 @@
+sequenceDiagram
+  participant A as Agent
+  participant C as Coordinator / C6
+  participant Q as PostgreSQL
+  participant D as Donor
+  participant P as Publisher / NAS
+  A->>C: register (mTLS identity, session, version, source, storage)
+  C->>Q: bind current session transactionally
+  C-->>A: confirmed registration
+  A->>C: heartbeat (resources / current attempt)
+  C->>Q: confirm metrics and renew valid lease
+  A->>C: lease (Idempotency-Key)
+  C->>Q: lock worker / job / lazy chunk; new attempt
+  Q-->>C: commit lease + stored response
+  C-->>A: run / chunk / attempt / next_id / expiry / config
+  loop Each actual redirect, retry or Range
+    A->>C: request permit (UID, class, lease)
+    C->>Q: validate authority / lease / session
+    C-->>A: permit / epoch / connection lease
+    A->>D: one actual HTTP request
+    D-->>A: status / headers / body
+    A->>C: release slot + feedback
+    C->>Q: persist feedback and quota adaptation
+  end
+  A->>C: progress (body hash, sequence)
+  C->>Q: confirm result / reserve space / advance only contiguous prefix
+  A->>P: write own .part, fsync, SHA-256
+  A->>C: commit stage / checksum / size / attempt
+  C->>Q: publication verifying + stored 202
+  C->>P: verify lease, copy to publisher-owned inode, hash, atomic rename
+  C->>Q: transaction ready file + final result + checkpoint
+  C-->>A: publication ready
+  A->>C: repeat confirmed progress with same key/body
+  C->>Q: read stored response
+  C-->>A: previous result, no repeated side effects

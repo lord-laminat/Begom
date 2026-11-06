@@ -1,0 +1,2 @@
+# Single target; URI, restricted SQL role and password file come from Compose.
+auth_modules: {}

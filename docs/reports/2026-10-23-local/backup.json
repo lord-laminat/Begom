@@ -1,0 +1,43 @@
+{
+  "profile": "compose-mock-isolated-restore",
+  "started_at": "2026-10-23T08:41:31.124263+00:00",
+  "checks": [
+    {
+      "name": "consistent_SQL_and_published_snapshot",
+      "status": "passed"
+    },
+    {
+      "name": "new_isolated_database_and_directory",
+      "status": "passed"
+    },
+    {
+      "name": "all_manifest_file_and_SQL_hashes_verified",
+      "status": "passed"
+    },
+    {
+      "name": "measured_RPO_and_RTO",
+      "status": "passed"
+    }
+  ],
+  "backup": {
+    "backup_id": "e0b9028eeec9bb96c3ff34ec8188af31",
+    "started_at": "2026-10-23T08:41:33.191538208Z",
+    "finished_at": "2026-10-23T08:41:40.640985803Z",
+    "files": 1270,
+    "state": "completed",
+    "snapshot": "29a19b42b6ec37ab942a47c8e809410364dbcdc4cf55ccd586fe460418fddcf4"
+  },
+  "restore": {
+    "backup_id": "e0b9028eeec9bb96c3ff34ec8188af31",
+    "started_at": "2026-10-23T08:41:42.75502804Z",
+    "finished_at": "2026-10-23T08:41:57.663561243Z",
+    "files": 1270,
+    "state": "completed",
+    "snapshot": "29a19b42b6ec37ab942a47c8e809410364dbcdc4cf55ccd586fe460418fddcf4",
+    "database": "begom_restore_20261023_084140_dd93ff",
+    "restore_root": "/restore-state/restores/20261023_084140_dd93ff",
+    "rpo_seconds": 9.563489832,
+    "rto_seconds": 14.908533203
+  },
+  "finished_at": "2026-10-23T08:41:57.835808+00:00"
+}

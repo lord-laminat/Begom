@@ -1,0 +1,10 @@
+[Unit]
+Description=Renew private NFS Kerberos credentials
+After=network-online.target
+Wants=network-online.target
+[Service]
+Type=oneshot
+ExecStartPre=/usr/bin/install -d -m 0755 /run/begom-ccaches
+ExecStart=/usr/local/libexec/begom-tickets
+ProtectHome=true
+UMask=0077

@@ -1,0 +1,6 @@
+#!/bin/sh
+set -eu
+{% for ticket in begom_tickets %}
+/usr/bin/install -d -o {{ ticket.user }} -m 0700 /run/begom-ccaches/{{ ticket.uid }}
+/usr/sbin/runuser -u {{ ticket.user }} -- /usr/bin/env KRB5CCNAME=FILE:/run/begom-ccaches/{{ ticket.uid }}/krb5cc_{{ ticket.uid }} /usr/bin/kinit -kt /etc/begom/{{ ticket.file }} {{ ticket.principal }}@{{ begom_realm }}
+{% endfor %}

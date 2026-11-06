@@ -1,0 +1,18 @@
+[libdefaults]
+ default_realm = {{ begom_realm }}
+ dns_lookup_kdc = false
+ dns_lookup_realm = false
+ rdns = false
+ forwardable = false
+ ticket_lifetime = 10h
+ renew_lifetime = 1d
+[realms]
+ {{ begom_realm }} = {
+  kdc = {{ begom_nas }}
+  admin_server = {{ begom_nas }}
+  auth_to_local = RULE:[1:$1](begom-web)s/^.*$/www-data/
+  auth_to_local = DEFAULT
+ }
+[domain_realm]
+ .{{ begom_domain }} = {{ begom_realm }}
+ {{ begom_domain }} = {{ begom_realm }}

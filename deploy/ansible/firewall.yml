@@ -1,0 +1,19 @@
+- ansible.builtin.apt: {name: [nftables, prometheus-node-exporter], state: present}
+- ansible.builtin.service: {name: prometheus-node-exporter, enabled: true, state: started}
+- ansible.builtin.file: {path: /etc/nftables.d, state: directory, mode: '0755'}
+- ansible.builtin.template: {src: firewall.nft.j2, dest: /etc/nftables.d/begom.nft, mode: '0600'}
+- ansible.builtin.copy:
+    dest: /etc/systemd/system/begom-firewall.service
+    mode: '0644'
+    content: |
+      [Unit]
+      Description=Restrict Begom ports to the private and administrative networks
+      After=network-pre.target docker.service
+      Before=begom-coordinator.service begom-agent.service
+      [Service]
+      Type=oneshot
+      RemainAfterExit=yes
+      ExecStart=/usr/sbin/nft -f /etc/nftables.d/begom.nft
+      [Install]
+      WantedBy=multi-user.target
+- ansible.builtin.systemd_service: {name: begom-firewall, daemon_reload: true, enabled: true, state: restarted}

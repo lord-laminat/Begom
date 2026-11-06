@@ -1,0 +1,8 @@
+{
+  "public_host": "begom.example.internal",
+  "coordinator_host": "control.example.internal",
+  "postgres_host": "control.example.internal",
+  "openbao_host": "control.example.internal",
+  "worker_hosts": ["agent1.example.internal", "agent2.example.internal", "agent3.example.internal"],
+  "source": "kinescope"
+}

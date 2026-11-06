@@ -1,0 +1,43 @@
+{
+  "profile": "compose-mock-isolated-restore",
+  "started_at": "2026-11-06T07:47:09.453357+00:00",
+  "checks": [
+    {
+      "name": "consistent_SQL_and_published_snapshot",
+      "status": "passed"
+    },
+    {
+      "name": "new_isolated_database_and_directory",
+      "status": "passed"
+    },
+    {
+      "name": "all_manifest_file_and_SQL_hashes_verified",
+      "status": "passed"
+    },
+    {
+      "name": "measured_RPO_and_RTO",
+      "status": "passed"
+    }
+  ],
+  "backup": {
+    "backup_id": "ebbabac7cfe312b1fb20e8f37938241a",
+    "started_at": "2026-11-06T07:47:13.374407209Z",
+    "finished_at": "2026-11-06T07:47:19.912132117Z",
+    "files": 362,
+    "state": "completed",
+    "snapshot": "5f71b64f3ef92c0a45c470822a46d4d33f1dc852d18991a041ab0b2be9f9c58d"
+  },
+  "restore": {
+    "backup_id": "ebbabac7cfe312b1fb20e8f37938241a",
+    "started_at": "2026-11-06T07:47:22.663322092Z",
+    "finished_at": "2026-11-06T07:47:29.854831414Z",
+    "files": 362,
+    "state": "completed",
+    "snapshot": "5f71b64f3ef92c0a45c470822a46d4d33f1dc852d18991a041ab0b2be9f9c58d",
+    "database": "begom_restore_20261106_074720_6df4c8",
+    "restore_root": "/restore-state/restores/20261106_074720_6df4c8",
+    "rpo_seconds": 9.288914883,
+    "rto_seconds": 7.191509322
+  },
+  "finished_at": "2026-11-06T07:47:30.081075+00:00"
+}

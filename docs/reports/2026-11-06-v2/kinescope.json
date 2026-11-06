@@ -1,0 +1,72 @@
+{
+  "profile": "real-kinescope-v2",
+  "started_at": "2026-11-06T09:09:42.311666+00:00",
+  "external_id": "203613411",
+  "checks": [
+    {
+      "name": "real_donor",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "three_agents",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "discovery_available_without_file",
+      "status": "passed",
+      "observed": [
+        {
+          "status": "available",
+          "error_code": ""
+        }
+      ]
+    },
+    {
+      "name": "catalog_has_one_permitted_material",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "download_completed",
+      "status": "passed",
+      "observed": {
+        "status": "completed",
+        "error_code": ""
+      }
+    },
+    {
+      "name": "delivered_size_and_SHA256",
+      "status": "passed",
+      "observed": {
+        "bytes": 122148096
+      }
+    },
+    {
+      "name": "range_206",
+      "status": "passed",
+      "observed": null
+    },
+    {
+      "name": "preview_and_duration",
+      "status": "passed",
+      "observed": {
+        "state": "ready",
+        "duration_ms": 258461
+      }
+    }
+  ],
+  "discovery_job_id": "4e846f9504d8d82f6a842017c871c64d",
+  "download_job_id": "6b3181094aab4251f06d434f1343a44e",
+  "file": {
+    "file_id": "6fc4848a2322c1c5fb4867f34953f1ed",
+    "external_id": "203613411",
+    "size_bytes": "122148096",
+    "checksum": "515a1a8a4ff30f9e435b6f0df3a24a990e647334e8d0ad286c4a3f7fee5e6db4",
+    "mime_type": "video/mp4",
+    "title": "Roof Ski"
+  },
+  "status": "passed",
+  "finished_at": "2026-11-06T09:10:07.851171+00:00"
+}

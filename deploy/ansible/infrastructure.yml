@@ -1,0 +1,48 @@
+- ansible.builtin.apt: {name: [docker.io, docker-compose-v2], state: present}
+- ansible.builtin.service: {name: docker, enabled: true, state: started}
+- ansible.builtin.file: {path: /etc/begom-infra/secrets, state: directory, mode: '0700'}
+- ansible.builtin.file: {path: '/var/lib/begom-infra/{{ item.path }}', state: directory, owner: '{{ item.uid }}', mode: '0700'}
+  loop: [{path: bao, uid: 10000}, {path: postgres, uid: 999}, {path: prometheus, uid: 65534}, {path: grafana, uid: 472}, {path: loki, uid: 10001}, {path: fluent-bit, uid: 0}]
+- ansible.builtin.copy:
+    src: '{{ begom_bundle }}/secrets/{{ item }}'
+    dest: '/etc/begom-infra/secrets/{{ item }}'
+    mode: '0600'
+  loop: [postgres-password, app-db-password, backup-db-password, metrics-db-password, postgres.crt, postgres.key, openbao.crt, openbao.key, metrics.crt, metrics.key, ca.crt, grafana-password]
+  no_log: true
+- ansible.builtin.file: {path: '/etc/begom-infra/secrets/{{ item }}', owner: 999, mode: '0400'}
+  loop: [postgres-password, postgres.key, postgres.crt]
+- ansible.builtin.file: {path: '/etc/begom-infra/secrets/{{ item }}', owner: 10000, mode: '0400'}
+  loop: [openbao.crt, openbao.key]
+- ansible.builtin.file: {path: /etc/begom-infra/secrets, mode: '0711'}
+- ansible.builtin.file: {path: '/etc/begom-infra/secrets/{{ item }}', owner: 65534, mode: '0400'}
+  loop: [metrics.crt, metrics.key]
+- ansible.builtin.file: {path: /etc/begom-infra/secrets/ca.crt, mode: '0444'}
+- ansible.builtin.file: {path: /etc/begom-infra/secrets/grafana-password, owner: 472, mode: '0400'}
+- ansible.builtin.copy: {src: '{{ begom_binaries }}/begomctl', dest: /etc/begom-infra/begomctl, mode: '0755'}
+- ansible.builtin.copy: {src: '../postgres/init.sh', dest: /etc/begom-infra/init.sh, mode: '0644'}
+- ansible.builtin.template: {src: '{{ item }}.j2', dest: '/etc/begom-infra/{{ item }}', mode: '0644'}
+  loop: [compose.yml, openbao.hcl, prometheus.yml, loki.yml, fluent-bit.conf]
+- ansible.builtin.copy: {src: '../prometheus/alerts.yml', dest: /etc/begom-infra/alerts.yml, mode: '0644'}
+- ansible.builtin.copy: {src: '../fluent-bit/{{ item }}', dest: '/etc/begom-infra/{{ item }}', mode: '0644'}
+  loop: [parsers.conf, enrich.lua]
+- ansible.builtin.copy: {src: '../grafana/', dest: /etc/begom-infra/grafana/, mode: '0755'}
+- ansible.builtin.file: {path: /var/log/nginx, state: directory, mode: '0755'}
+- ansible.builtin.copy:
+    dest: /etc/systemd/system/begom-infrastructure.service
+    mode: '0644'
+    content: |
+      [Unit]
+      Description=Begom SQL, secret service and observability
+      After=docker.service network-online.target
+      Requires=docker.service
+      [Service]
+      Type=oneshot
+      RemainAfterExit=yes
+      WorkingDirectory=/etc/begom-infra
+      ExecStart=/usr/bin/docker compose -f compose.yml up -d
+      ExecStop=/usr/bin/docker compose -f compose.yml stop
+      TimeoutStartSec=900
+      [Install]
+      WantedBy=multi-user.target
+- ansible.builtin.systemd_service: {name: begom-infrastructure, daemon_reload: true, enabled: true, state: started}
+- ansible.builtin.wait_for: {host: '{{ begom_control }}', port: 8200, timeout: 120}

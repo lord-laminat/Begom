@@ -1,0 +1,11 @@
+.git
+.local
+.local-*
+bin
+artifacts
+node_modules
+test-results
+playwright-report
+docs/*.pdf
+docs/*.docx
+docs/figures/*.png

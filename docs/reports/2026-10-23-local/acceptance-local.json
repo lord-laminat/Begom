@@ -1,0 +1,103 @@
+{
+  "version": "1.0.0",
+  "started_at": "2026-10-23T09:03:12.402127005Z",
+  "finished_at": "2026-10-23T09:04:47.488778868Z",
+  "profile": "compose",
+  "checks": [
+    {
+      "name": "workers",
+      "status": "passed",
+      "expected": "at least three healthy workers",
+      "observed": 3
+    },
+    {
+      "name": "parallel_operations",
+      "status": "passed",
+      "expected": "peak \u003e= 100 actual mock requests",
+      "observed": 100
+    },
+    {
+      "name": "global_rate_window",
+      "status": "passed",
+      "expected": "at most 80 arrivals per sliding second",
+      "observed": 42
+    },
+    {
+      "name": "confirmed_files",
+      "status": "passed",
+      "expected": "240 completed IDs",
+      "observed": 240
+    },
+    {
+      "name": "published_integrity",
+      "status": "passed",
+      "expected": "SHA-256 of twenty delivered videos equals catalog",
+      "observed": 20
+    },
+    {
+      "name": "client_range",
+      "status": "passed",
+      "expected": "206 and sixteen bytes",
+      "observed": {
+        "bytes": 16,
+        "status": 206
+      }
+    },
+    {
+      "name": "canonical_deduplication",
+      "status": "passed",
+      "expected": "subsequent jobs reuse ready file IDs",
+      "observed": 20
+    },
+    {
+      "name": "agent_failure_reassignment",
+      "status": "passed",
+      "expected": "new assignment within 2*2 + 10 = 14 seconds",
+      "observed": 10.709779975
+    },
+    {
+      "name": "coordinator_restart",
+      "status": "passed",
+      "expected": "all confirmed file IDs survive restart",
+      "observed": {
+        "confirmed_before": 1,
+        "items_after": 120
+      }
+    },
+    {
+      "name": "soft_pause",
+      "status": "passed",
+      "expected": "finish in-flight IDs and release the rest of each block",
+      "observed": 120
+    },
+    {
+      "name": "resume_generation",
+      "status": "passed",
+      "expected": "resume changes run_id"
+    },
+    {
+      "name": "immediate_stop",
+      "status": "passed",
+      "expected": "cancel active HTTP and preserve checkpoints within five seconds",
+      "observed": 0.269712406
+    },
+    {
+      "name": "browser_metric_latency",
+      "status": "separate_suite",
+      "expected": "tests/browser measures collect-to-render \u003c= 5s"
+    },
+    {
+      "name": "NFS_Kerberos_isolation",
+      "status": "separate_stand",
+      "expected": "deploy/ansible acceptance on independent Linux nodes"
+    }
+  ],
+  "job_ids": [
+    "b2c1eb60855b929d60eeca263aee5f1f",
+    "be1736f1825e4a978fcc9bb2974bea55",
+    "d77c9117a25550d80a9d5775cbe90659",
+    "233e8a49e5df6b6ba334527215f8d50d",
+    "458ab56be7552fa3f9e631b7ba30e48b",
+    "f4550e3e75cb02379fc37c30aa46a7a9"
+  ]
+}

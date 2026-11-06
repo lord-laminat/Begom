@@ -1,0 +1,13 @@
+.local/
+.local-*/
+deploy/ansible/inventory.yml
+deploy/ansible/group_vars/
+bin/
+artifacts/
+coverage.out
+*.test
+node_modules/
+playwright-report/
+test-results/
+__pycache__/
+*.retry

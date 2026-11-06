@@ -1,0 +1,4 @@
+services:
+  grafana:
+    environment:
+      GF_SERVER_ROOT_URL: ${BEGOM_PUBLIC_ORIGIN:-https://localhost:8445}/grafana/

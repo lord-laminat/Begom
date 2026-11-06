@@ -1,0 +1,24 @@
+- ansible.builtin.apt: {name: [prometheus-node-exporter, docker.io, docker-compose-v2], state: present}
+- ansible.builtin.service: {name: prometheus-node-exporter, enabled: true, state: started}
+- ansible.builtin.file: {path: /etc/begom-observability, state: directory, mode: '0755'}
+- ansible.builtin.file: {path: /var/lib/begom-fluent-bit, state: directory, mode: '0700'}
+- ansible.builtin.template: {src: fluent-bit.conf.j2, dest: /etc/begom-observability/fluent-bit.conf, mode: '0644'}
+- ansible.builtin.copy: {src: '../fluent-bit/{{ item }}', dest: '/etc/begom-observability/{{ item }}', mode: '0644'}
+  loop: [parsers.conf, enrich.lua]
+- ansible.builtin.copy:
+    dest: /etc/begom-observability/compose.yml
+    mode: '0644'
+    content: |
+      name: begom-observability
+      services:
+        fluent-bit:
+          image: cr.fluentbit.io/fluent/fluent-bit:5.1.5@sha256:2740f387f6e68fab66d28e4fa6a853387b9cab6ffb4cb78958f69bba4eb0e7b4
+          restart: unless-stopped
+          network_mode: host
+          user: '0:0'
+          mem_limit: 128m
+          logging: {driver: json-file, options: {max-size: 10m, max-file: '3'}}
+          volumes: [/etc/begom-observability/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro, /etc/begom-observability/parsers.conf:/fluent-bit/etc/parsers.conf:ro, /etc/begom-observability/enrich.lua:/fluent-bit/etc/enrich.lua:ro, /var/log/journal:/var/log/journal:ro, /etc/machine-id:/etc/machine-id:ro, /var/lib/begom-fluent-bit:/buffers]
+- ansible.builtin.command:
+    argv: [docker, compose, -f, /etc/begom-observability/compose.yml, up, -d]
+  changed_when: true

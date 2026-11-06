@@ -1,0 +1,54 @@
+{
+  "run_id": 42191247060,
+  "commit": "b46c331d6fa24d449c635f844a704aec0c696e3c",
+  "url": "https://github.com/lord-laminat/Begom/actions/runs/42191247060",
+  "checks": [
+    {
+      "id": 127803519980,
+      "name": "go",
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-11-06T08:56:10Z",
+      "completed_at": "2026-11-06T08:56:12Z",
+      "output": {
+        "title": null,
+        "summary": null,
+        "text": null,
+        "annotations_count": 1,
+        "annotations_url": "https://api.github.com/repos/lord-laminat/Begom/check-runs/127803519980/annotations"
+      },
+      "annotations": [
+        {
+          "annotation_level": "failure",
+          "title": "",
+          "message": "The job was not started because your account is locked due to a billing issue."
+        }
+      ]
+    },
+    {
+      "id": 127803520412,
+      "name": "stand",
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-11-06T08:56:10Z",
+      "completed_at": "2026-11-06T08:56:12Z",
+      "output": {
+        "title": null,
+        "summary": null,
+        "text": null,
+        "annotations_count": 1,
+        "annotations_url": "https://api.github.com/repos/lord-laminat/Begom/check-runs/127803520412/annotations"
+      },
+      "annotations": [
+        {
+          "annotation_level": "failure",
+          "title": "",
+          "message": "The job was not started because your account is locked due to a billing issue."
+        }
+      ]
+    }
+  ],
+  "runner_assigned": false,
+  "executed_steps": 0,
+  "note": "Both GitHub-hosted jobs were rejected before startup because the GitHub account is locked due to a billing issue. No build or test executed on the hosted runner."
+}

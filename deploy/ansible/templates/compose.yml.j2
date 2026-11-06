@@ -1,0 +1,76 @@
+name: begom-infrastructure
+x-service: &service
+  restart: unless-stopped
+  network_mode: host
+  logging:
+    driver: fluentd
+    options:
+      fluentd-address: 127.0.0.1:24224
+      fluentd-async: 'true'
+      fluentd-buffer-limit: '4096'
+      mode: non-blocking
+      max-buffer-size: 4m
+      tag: 'begom.{{ "{{.Name}}" }}'
+      cache-max-size: 10m
+      cache-max-file: '3'
+services:
+  postgres:
+    <<: *service
+    image: postgres:18.6-bookworm@sha256:bbf83594798e144bff365a9c191c5d779f181fb3135902064ab8ff11918020fc
+    environment: {POSTGRES_USER: begom_admin, POSTGRES_DB: begom, POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password, POSTGRES_INITDB_ARGS: '--auth-host=scram-sha-256'}
+    command: [postgres, -c, ssl=on, -c, ssl_cert_file=/run/secrets/postgres.crt, -c, ssl_key_file=/run/secrets/postgres.key, -c, ssl_min_protocol_version=TLSv1.3, -c, log_min_error_statement=panic, -c, log_parameter_max_length=0, -c, log_parameter_max_length_on_error=0]
+    volumes: [/var/lib/begom-infra/postgres:/var/lib/postgresql, /etc/begom-infra/secrets:/run/secrets:ro, /etc/begom-infra/init.sh:/docker-entrypoint-initdb.d/10-begom.sh:ro, /etc/begom-infra/begomctl:/usr/local/bin/begomctl:ro]
+    mem_limit: 2g
+    healthcheck: {test: [CMD-SHELL, 'pg_isready -U begom_admin -d begom'], interval: 2s, timeout: 2s, retries: 30}
+  openbao:
+    <<: *service
+    image: quay.io/openbao/openbao:2.7.1@sha256:6d2b93856e3fcf7b18ad855a0b51eaba474dc8b79cf554379ea32034797d2acf
+    user: '10000:10000'
+    command: [server, -config=/bao/config/config.hcl]
+    volumes: [/etc/begom-infra/openbao.hcl:/bao/config/config.hcl:ro, /var/lib/begom-infra/bao:/bao/file, /etc/begom-infra/secrets/openbao.crt:/run/secrets/openbao.crt:ro, /etc/begom-infra/secrets/openbao.key:/run/secrets/openbao.key:ro]
+    cap_drop: [ALL]
+    mem_limit: 512m
+  prometheus:
+    <<: *service
+    image: prom/prometheus:v3.15.1@sha256:fa3302279710be2f21a8301ec17a8b4f2301fd829bd113839b3b6b02b6f191a2
+    command: [--config.file=/etc/prometheus/prometheus.yml, --storage.tsdb.path=/prometheus, --storage.tsdb.retention.time=14d, --web.listen-address=127.0.0.1:9090]
+    volumes: [/etc/begom-infra/prometheus.yml:/etc/prometheus/prometheus.yml:ro, /etc/begom-infra/alerts.yml:/etc/prometheus/alerts.yml:ro, /etc/begom-infra/secrets/ca.crt:/run/secrets/ca.crt:ro, /etc/begom-infra/secrets/metrics.crt:/run/secrets/client.crt:ro, /etc/begom-infra/secrets/metrics.key:/run/secrets/client.key:ro, /var/lib/begom-infra/prometheus:/prometheus]
+    mem_limit: 1g
+  loki:
+    <<: *service
+    image: grafana/loki:3.7.9@sha256:0db216b630ae1f348a1584c67f3cead8b4c1fc839169a39501db664744158e28
+    command: [-config.file=/etc/loki/config.yml]
+    volumes: [/etc/begom-infra/loki.yml:/etc/loki/config.yml:ro, /var/lib/begom-infra/loki:/loki]
+    mem_limit: 1g
+  grafana:
+    <<: *service
+    image: grafana/grafana:13.2.4@sha256:dbbc38ea21103cefb50396340cd88afec779c7e070b0a7bf5a75b4ce46651d3f
+    environment:
+      GF_SERVER_ROOT_URL: https://{{ begom_public_name }}/grafana/
+      GF_SERVER_SERVE_FROM_SUB_PATH: 'true'
+      GF_SERVER_HTTP_ADDR: 127.0.0.1
+      GF_AUTH_PROXY_ENABLED: 'true'
+      GF_AUTH_PROXY_HEADER_NAME: X-WEBAUTH-USER
+      GF_AUTH_PROXY_AUTO_SIGN_UP: 'true'
+      GF_AUTH_DISABLE_LOGIN_FORM: 'true'
+      GF_AUTH_BASIC_ENABLED: 'false'
+      GF_USERS_AUTO_ASSIGN_ORG_ROLE: Admin
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/admin-password
+      GF_DASHBOARDS_MIN_REFRESH_INTERVAL: 1s
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/begom.json
+      GF_LOG_CONSOLE_FORMAT: json
+      GF_METRICS_ENABLED: 'true'
+      GF_ANALYTICS_REPORTING_ENABLED: 'false'
+      GF_ANALYTICS_CHECK_FOR_UPDATES: 'false'
+      GF_PLUGINS_PREINSTALL_DISABLED: 'true'
+    volumes: [/etc/begom-infra/grafana/provisioning:/etc/grafana/provisioning:ro, /etc/begom-infra/grafana/dashboards:/var/lib/grafana/dashboards:ro, /var/lib/begom-infra/grafana:/var/lib/grafana, /etc/begom-infra/secrets/grafana-password:/run/secrets/admin-password:ro]
+    extra_hosts: ['prometheus:127.0.0.1', 'loki:127.0.0.1']
+    mem_limit: 1g
+  fluent-bit:
+    <<: *service
+    image: cr.fluentbit.io/fluent/fluent-bit:5.1.5@sha256:2740f387f6e68fab66d28e4fa6a853387b9cab6ffb4cb78958f69bba4eb0e7b4
+    user: '0:0'
+    logging: {driver: json-file, options: {max-size: 10m, max-file: '3'}}
+    volumes: [/etc/begom-infra/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro, /etc/begom-infra/parsers.conf:/fluent-bit/etc/parsers.conf:ro, /etc/begom-infra/enrich.lua:/fluent-bit/etc/enrich.lua:ro, /var/log/journal:/var/log/journal:ro, /var/log/nginx:/var/log/nginx:ro, /etc/machine-id:/etc/machine-id:ro, /var/lib/begom-infra/fluent-bit:/buffers]
+    mem_limit: 128m

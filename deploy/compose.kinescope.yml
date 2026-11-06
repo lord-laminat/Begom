@@ -1,0 +1,10 @@
+# Use a separate initialized state directory and project from the mock stand.
+services:
+  worker-1:
+    networks: [control, edge]
+  worker-2:
+    networks: [control, edge]
+  worker-3:
+    networks: [control, edge]
+  mockdonor:
+    profiles: [mock]
